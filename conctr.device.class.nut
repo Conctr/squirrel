@@ -87,23 +87,23 @@ class Conctr {
 
         // set timestamp to now if not already set
         if (!("_ts" in payload) || (payload._ts == null)) {
-            payload._ts < -time();
+            payload._ts <- time();
         }
 
         // Add an unique id for tracking the response
-        payload._id < -format("%d:%d", hardware.millis(), hardware.micros());
+        payload._id <- format("%d:%d", hardware.millis(), hardware.micros());
 
         _getWifis(function(wifis) {
 
             if ((wifis != null) && !("_location" in payload)) {
-                payload._location < -wifis;
+                payload._location <- wifis;
             }
 
             // Todo: Add optional Bullwinkle here
             // Store the callback for later
-            if (callback) _onResponse[payload._id] < -callback;
+            if (callback) _onResponse[payload._id] <- callback;
             agent.send("conctr_data", payload);
-        });
+        }.bindenv(this));
 
     }
 
