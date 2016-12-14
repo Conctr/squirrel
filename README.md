@@ -17,6 +17,7 @@ To use this library you will need to :
 
 ### Constructor: Conctr(*app_id, api_key, model[, region][, environment][, device_id]*)
 The constructor takes three required parameters: your application id, API key and model. There is also  three optional parameter, the region to be used (defaults to us-west-2), the environment (defualts to core) and the device id (defaults to electric imps device id).
+
 | Key | Data Type | Required | Default Value | Description |
 | ----| --------------- | --------- | ----------- |----------- |
 | *app_id* | String | Yes | N/A | The application Id used to uniquely identify the application |
@@ -89,11 +90,12 @@ Instantiates the Conctr device class. It takes an optional **opts** table to ove
 **opts**
 
 A table containing any of the following keys may be passed into the Conctr constructor to modify the default behavior:
+
 | Key | Data type | Default value | Description |
 | ----| --------------- | --------- | ----------- |
 | isEnabled | Boolean | `true` | When enabled, location data will be automatically included with the data payload|
 | interval | Integer | 3600000|  Duration in milliseconds since last location update to wait before sending a new location |
- | sendOnce | Boolean | `false` | Setting to `true` sends the location of the device only once when the device restarts |
+| sendOnce | Boolean | `false` | Setting to `true` sends the location of the device only once when the device restarts |
  
  **NOTE: The *isEnabled* option takes precedence over *sendOnce*. Meaning if isEnabled is set to `false` location will never be sent with the data until this flag is changed.**
  
@@ -115,11 +117,12 @@ Overrides the default options of the Conctr class. Takes an optional table **opt
 **opts**
 
 A table containing any of the following keys may be passed into the Conctr constructor to modify the default behavior:
+
 | Key | Data type | Default value | Description |
 | ----| --------------- | --------- | ----------- |
 | isEnabled | Boolean | `true` | When enabled, location data will be automatically included with the data payload|
 | interval | Integer | 3600000|  Duration in milliseconds since last location update to wait before sending a new location |
- | sendOnce | Boolean | `false` | Setting to `true` sends the location of the device only once when the device restarts |
+| sendOnce | Boolean | `false` | Setting to `true` sends the location of the device only once when the device restarts |
  
  ### sendData(*payload[, callback]*)
 
