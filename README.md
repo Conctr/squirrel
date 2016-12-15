@@ -81,6 +81,35 @@ conctr.sendData(curTempAndPressure, function(error, response) {
         //data was successfully recieved by Conctr
 });
 ```
+### setOpts([*opts*])
+
+Overrides the default options of the Conctr agent class. Takes an optional table **opts**. Any keys that arent provided will be set back to defualts.
+
+**opts**
+
+A table containing any of the following keys may be passed into the Conctr constructor to modify the default behavior:
+
+| Key | Data type | Default value | Description |
+| ----| --------------- | --------- | ----------- |
+| alwaysSendLoc | Boolean | `false` | Setting to true will send last known (cached) location if no location was found in payload passed to the sendData function.|
+
+### getLastKnownLocation()
+
+The *getLastKnownLocation()* function returns a table containing the last known location and the timestamp it was recieved. 
+
+
+
+##### Example
+
+```squirrel
+local lastKnownLocation=conctr.getLastKnownLocation();
+
+//store the location to a variable
+local location = lastKnownLocation.location;
+
+//store the timestamp the location was cached
+local locationRecievedAt = lastKnownLocation.ts;
+```
 
 ## Device Class Usage
 
@@ -112,7 +141,7 @@ conctr <- Conctr(opts);
  
 ### setOpts([*opts*])
 
-Overrides the default options of the Conctr class. Takes an optional table **opts**. Any keys that arent provided will be set back to defualts.
+Overrides the default options of the Conctr device class. Takes an optional table **opts**. Any keys that arent provided will be set back to defualts.
 
 **opts**
 

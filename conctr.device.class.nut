@@ -65,7 +65,7 @@ class Conctr {
         _interval = ("interval" in opts && opts.interval != null) ? opts.interval : HOUR_MS; // set default interval between location updates
         _sendLocationOnce = ("sendOnce" in opts && opts.sendOnce != null) ? opts.sendOnce : null;
 
-        _locationRecording = opts.isEnabled;
+        _locationRecording = ("isEnabled" in opts) ? opts.isEnabled : _locationRecording;
         _locationTimeout = hardware.millis();
         _locationSent = false;
 
@@ -87,7 +87,7 @@ class Conctr {
 
         // set timestamp to now if not already set
         if (!("_ts" in payload) || (payload._ts == null)) {
-            payload._ts <- time();
+            payload._ts <-time();
         }
 
         // Add an unique id for tracking the response
@@ -103,7 +103,7 @@ class Conctr {
             // Store the callback for later
             if (callback) _onResponse[payload._id] <- callback;
             agent.send("conctr_data", payload);
-        }.bindenv(this));
+        });
 
     }
 

@@ -11,6 +11,8 @@ class Conctr {
 
     static DATA_EVENT = "conctr_data";
 
+    lastKnownLoc = {"location":null,"ts":0};
+
     _api_key = null;
     _app_id = null;
     _device_id = null;
@@ -19,7 +21,10 @@ class Conctr {
     _model = null;
     _dataApiEndpoint = null;
 
-    _DEBUG = false;
+    //flag which when set to true will used cached location if _location is not set in payload when sending data
+    _alwaysSendLoc = null;
+    
+    _DEBUG = true;
 
     /**
      * @param  {String} app_id -
@@ -42,6 +47,9 @@ class Conctr {
         _env = (env == null) ? "core" : env;
         _device_id = (device_id == null) ? imp.configparams.deviceid : device_id;
 
+        //By default only send location when it is sent via the payload.
+        _alwaysSendLoc=false;
+
         // Setup the endpoint url
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
 
@@ -61,7 +69,6 @@ class Conctr {
         _device_id = (device_id == null) ? imp.configparams.deviceid : device_id;
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
     }
-
 
 
     /**
@@ -84,6 +91,7 @@ class Conctr {
 
         // Add the model id to each of the payloads
         if (typeof payload == "array") {
+
             // It's an array of tables
             foreach (k,v in payload) {
                 if (typeof v != "table") {
@@ -96,6 +104,20 @@ class Conctr {
                 // Set the time stamp if not set already
                 if (!("_ts" in payload[k]) || (payload[k]._ts == null)) {
                     payload[k]._ts <- time();
+                }
+
+                //cache the last known location if it is more recent then current cached value
+                if("_location" in payload[k] && payload[k]._ts>lastKnownLoc.ts){
+                    lastKnownLoc.location=payload[k]._location;
+                    lastKnownLoc.ts=payload[k]._ts;
+                }
+
+                if(_alwaysSendLoc==true && !("_location" in payload[k])){
+                    if(lastKnownLoc.location!=null){
+                        payload[k]._location <- lastKnownLoc.location;
+                    }else{
+                        server.log("Conctr: warning - No cached location found but alwaysSendLoc was set to true. Location was not set.");
+                    }
                 }
 
                 // Store the ids
@@ -160,6 +182,29 @@ class Conctr {
             }
 
         }.bindenv(this));
+    }
+    /**
+     * Returns a table containing the last recieved location update from the device
+     * @return {Table} last known location with keys location and ts (timestamp) 
+     * {
+     *     location,
+     *     ts
+     * }
+     */
+    function getLastKnownLocation(){
+        return lastKnownLoc;
+    }
+
+    /**
+     * Change the currently set options
+     * @param {Table} opts Table containing
+     * {
+     *  {Boolean} alwaysSendLoc - Setting to true will send cached location if no location was 
+     *  found in payload passed to the sendData function.Default is false.
+     * }
+     */
+    function setOpts(opts){
+        _alwaysSendLoc=("alwaysSendLoc" in opts) ? opts.alwaysSendLoc : _alwaysSendLoc;
     }
 
 
