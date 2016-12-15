@@ -20,11 +20,8 @@ class Conctr {
     _env = null;
     _model = null;
     _dataApiEndpoint = null;
-
-    //flag which when set to true will used cached location if _location is not set in payload when sending data
-    _alwaysSendLoc = null;
     
-    _DEBUG = true;
+    _DEBUG = false;
 
     /**
      * @param  {String} app_id -
@@ -46,9 +43,6 @@ class Conctr {
         _region = (region == null) ? "us-west-2" : region;
         _env = (env == null) ? "core" : env;
         _device_id = (device_id == null) ? imp.configparams.deviceid : device_id;
-
-        //By default only send location when it is sent via the payload.
-        _alwaysSendLoc=false;
 
         // Setup the endpoint url
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
@@ -110,14 +104,6 @@ class Conctr {
                 if("_location" in payload[k] && payload[k]._ts>lastKnownLoc.ts){
                     lastKnownLoc.location=payload[k]._location;
                     lastKnownLoc.ts=payload[k]._ts;
-                }
-
-                if(_alwaysSendLoc==true && !("_location" in payload[k])){
-                    if(lastKnownLoc.location!=null){
-                        payload[k]._location <- lastKnownLoc.location;
-                    }else{
-                        server.log("Conctr: warning - No cached location found but alwaysSendLoc was set to true. Location was not set.");
-                    }
                 }
 
                 // Store the ids
@@ -193,18 +179,6 @@ class Conctr {
      */
     function getLastKnownLocation(){
         return lastKnownLoc;
-    }
-
-    /**
-     * Change the currently set options
-     * @param {Table} opts Table containing
-     * {
-     *  {Boolean} alwaysSendLoc - Setting to true will send cached location if no location was 
-     *  found in payload passed to the sendData function.Default is false.
-     * }
-     */
-    function setOpts(opts){
-        _alwaysSendLoc=("alwaysSendLoc" in opts) ? opts.alwaysSendLoc : _alwaysSendLoc;
     }
 
 

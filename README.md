@@ -81,17 +81,6 @@ conctr.sendData(curTempAndPressure, function(error, response) {
         //data was successfully recieved by Conctr
 });
 ```
-### setOpts([*opts*])
-
-Overrides the default options of the Conctr agent class. Takes an optional table **opts**. Any keys that arent provided will be set back to defualts.
-
-**opts**
-
-A table containing any of the following keys may be passed into the Conctr constructor to modify the default behavior:
-
-| Key | Data type | Default value | Description |
-| ----| --------------- | --------- | ----------- |
-| alwaysSendLoc | Boolean | `false` | Setting to true will send last known (cached) location if no location was found in payload passed to the sendData function.|
 
 ### getLastKnownLocation()
 
