@@ -11,6 +11,9 @@ class Conctr {
     // event to emit data payload
     static DATA_EVENT = "conctr_data";
 
+    static LOCATION_REQ = "conctr_get_location";
+    static LOCATION_RESP = "conctr_location";
+
     // 1 hour in milliseconds
     static HOUR_MS = 3600000;
 
@@ -20,6 +23,8 @@ class Conctr {
     _locationTimeout = 0;
     _interval = 0;
     _sendLocationOnce = false;
+
+    _DEBUG=false;
 
     // Callbacks
     _onResponse = null;
@@ -44,6 +49,7 @@ class Conctr {
         _onResponse = {};
 
         agent.on(DATA_EVENT, _doResponse.bindenv(this));
+        agent.on(LOCATION_REQ,_handleLocReq.bindenv(this));
     }
 
 
@@ -63,15 +69,11 @@ class Conctr {
     function setOpts(opts) {
 
         _interval = ("interval" in opts && opts.interval != null) ? opts.interval : HOUR_MS; // set default interval between location updates
-        _sendLocationOnce = ("sendOnce" in opts && opts.sendOnce != null) ? opts.sendOnce : null;
+        _sendLocationOnce = ("sendOnce" in opts && opts.sendOnce != null) ? opts.sendOnce : false;
 
-        _locationRecording = ("isEnabled" in opts) ? opts.isEnabled : _locationRecording;
+        _locationRecording = ("isEnabled" in opts  && opts.isEnabled != null) ? opts.isEnabled : _locationRecording;
         _locationTimeout = hardware.millis();
         _locationSent = false;
-
-        // TODO finish this. enabled only sends location every time, interval only sends it if the data update is
-        // after a certain interval since the last on and sendOnce only sends it once till device is rebooted
-
     }
 
 
@@ -102,6 +104,9 @@ class Conctr {
             // Todo: Add optional Bullwinkle here
             // Store the callback for later
             if (callback) _onResponse[payload._id] <- callback;
+
+            payload._source="impdevice";
+
             agent.send("conctr_data", payload);
         });
 
@@ -127,6 +132,22 @@ class Conctr {
         }
     }
 
+    /**
+     * handles a location request from the agent and responsed with wifis.
+     * @return {[type]} [description]
+     */
+    function _handleLocReq(arg){
+        if(_DEBUG){
+            server.log("CONCTR: recieved a location request from agent");
+        }
+        _getWifis(function(wifis){
+            if(_DEBUG){
+                server.log("CONCTR: responding to agent location request");
+            }
+            agent.send(LOCATION_RESP,wifis);
+        })
+    }
+
 
 
     /**
@@ -141,13 +162,16 @@ class Conctr {
 
         if (!_locationRecording) {
 
+            if(_DEBUG){
+                server.log("CONCTR: Location recording is not enabled");
+            }
             // not recording location 
             return callback(null);
 
         } else {
 
             // check new location scan conditions are met and search for proximal wifi networks
-            if ((_sendLocationOnce != null) && (_locationSent == false) || ((_sendLocationOnce == null) && (_locationRecording == true) && (_locationTimeout < hardware.millis()))) {
+            if ((_sendLocationOnce == true) && (_locationSent == false) || ((_sendLocationOnce == false) && (_locationRecording == true) && (_locationTimeout < hardware.millis()))) {
 
                 local wifis = imp.scanwifinetworks();
 

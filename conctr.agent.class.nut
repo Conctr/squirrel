@@ -10,8 +10,10 @@ class Conctr {
     static version = [1,0,0];
 
     static DATA_EVENT = "conctr_data";
+    static LOCATION_REQ = "conctr_get_location";
+    static LOCATION_RESP = "conctr_location";
 
-    lastKnownLoc = {"location":null,"ts":0};
+    _lastKnownLoc = null;
 
     _api_key = null;
     _app_id = null;
@@ -20,8 +22,9 @@ class Conctr {
     _env = null;
     _model = null;
     _dataApiEndpoint = null;
-    
+
     _DEBUG = false;
+
 
     /**
      * @param  {String} app_id -
@@ -43,6 +46,8 @@ class Conctr {
         _region = (region == null) ? "us-west-2" : region;
         _env = (env == null) ? "core" : env;
         _device_id = (device_id == null) ? imp.configparams.deviceid : device_id;
+
+        _lastKnownLoc={"location":null,"ts":0};
 
         // Setup the endpoint url
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
@@ -83,6 +88,8 @@ class Conctr {
         // Capture all the data ids in an array
         local ids = [];
 
+        local currentWifis=null;
+
         // Add the model id to each of the payloads
         if (typeof payload == "array") {
 
@@ -101,9 +108,9 @@ class Conctr {
                 }
 
                 //cache the last known location if it is more recent then current cached value
-                if("_location" in payload[k] && payload[k]._ts>lastKnownLoc.ts){
-                    lastKnownLoc.location=payload[k]._location;
-                    lastKnownLoc.ts=payload[k]._ts;
+                if("_location" in payload[k] && payload[k]._ts > _lastKnownLoc.ts){
+                    _lastKnownLoc.location=payload[k]._location;
+                    _lastKnownLoc.ts=payload[k]._ts;
                 }
 
                 // Store the ids
@@ -112,11 +119,52 @@ class Conctr {
                     delete payload[k]._id;
                 }
 
+
+
+                //If location is not present in the payload and the payload did not come from the device request location from device. 
+                if(!("_location" in payload[k]) && (!("_source" in payload[k]) ||  ("_source" in payload[k] && payload[k]._source!="impdevice"))){
+                    if(currentWifis==null && device.isconnected()){
+                        if(_DEBUG){
+                            server.log("Retrieving location from device");
+                        }
+                        _getLocation(function(wifis){
+                            if(wifis!=null){
+                                currentWifis=wifis;
+                                _lastKnownLoc.location=wifis;
+                                _lastKnownLoc.ts=time();
+                                payload[k]._location <- wifis;
+                            }
+                                
+                            _postDataToConctr(payload[k],callback);
+
+                        }.bindenv(this));
+                    }else{
+
+                        if(_DEBUG){
+                            server.log("Skipping location request from device.");
+                        }
+
+                        if(currentWifis!=null){
+                            payload._location=currentWifis;
+                        }else{
+                            server.log("CONCTR: warning, could not get location from device as it is not connected.");
+                        }
+
+                        _postDataToConctr(payload[k],callback);
+                    }
+                }else{
+                    _postDataToConctr(payload[k],callback);
+                }
+
             }
         } else {
             // This is not valid input
             throw "Conctr: Payload must contain a table or an array of tables";
         }
+
+    }
+
+    function _postDataToConctr(payload,callback = null){
 
 
         local headers = {
@@ -126,7 +174,7 @@ class Conctr {
 
 
         // Send the payload(s) to the endpoint
-        if (_DEBUG) server.log(format("\nSending: %s\n\n",http.jsonencode(payload)));
+        if (_DEBUG) server.log(format("CONCTR Sending: %s",http.jsonencode(payload)));
 
         local request = http.post(_dataApiEndpoint, headers, http.jsonencode(payload));
 
@@ -152,8 +200,8 @@ class Conctr {
 
 
             if (_DEBUG) {
-                if (body) server.log("Response: " + http.jsonencode(body));
-                if (error) server.log("Error: " + http.jsonencode(error));
+                if (body) server.log("CONCTR Response: " + http.jsonencode(body));
+                if (error) server.log("CONCTR Error: " + http.jsonencode(error));
             }
 
             // Return the result
@@ -164,11 +212,30 @@ class Conctr {
                 local device_result = { "ids": ids, "body": body, "error": error};
                 device.send(DATA_EVENT, device_result);
             } else if (error != null) {
-                server.error("Conctr: " + error);
+                server.error("Conctr Error: " + error);
             }
 
         }.bindenv(this));
     }
+
+    /**
+     * Retrieves location (array of wifis) from device if conditions in current location sending opts are met, responds with null if conditions not met
+     * @param  {Function} callback [description]
+     */
+    function _getLocation(callback){
+
+        if(_DEBUG){
+            server.log("CONCTR:Requesting location from device.");
+        }
+
+        device.on(LOCATION_RESP,callback);
+
+        device.send(LOCATION_REQ,"");
+
+        
+
+    }
+
     /**
      * Returns a table containing the last recieved location update from the device
      * @return {Table} last known location with keys location and ts (timestamp) 
@@ -178,9 +245,8 @@ class Conctr {
      * }
      */
     function getLastKnownLocation(){
-        return lastKnownLoc;
+        return _lastKnownLoc;
     }
-
 
     /**
      * Forms and returns the insert data API endpoint for the current device and Conctr application
@@ -198,6 +264,5 @@ class Conctr {
         // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
         //return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, app_id, device_id);
     }
-
 
 }
