@@ -13,18 +13,20 @@ class Conctr {
 
     static LOCATION_REQ = "conctr_get_location";
     static LOCATION_RESP = "conctr_location";
+    static AGENT_OPTS = "conctr_agent_options";
+    static SOURCE_DEVICE = "impdevice";
 
     // 1 hour in milliseconds
     static HOUR_MS = 3600000;
 
-    // Table parameters
+    // Location recording parameters
     _locationRecording = true;
     _locationSent = false;
     _locationTimeout = 0;
     _interval = 0;
     _sendLocationOnce = false;
 
-    _DEBUG=false;
+    _DEBUG=0;
 
     // Callbacks
     _onResponse = null;
@@ -44,7 +46,9 @@ class Conctr {
      */
     constructor(opts = null) {
 
-        if (opts != null) setOpts(opts);
+        //Call setOpts even if opts is null so defaults are set and agent gets default opts.
+        setOpts(opts);
+
         _locationTimeout = hardware.millis();
         _onResponse = {};
 
@@ -66,7 +70,7 @@ class Conctr {
      * NOTE: isEnabled takes precedence over sendOnce. Meaning if isEnabled is set to false location will never be sent 
      *       with the data until this flag is changed.
      */
-    function setOpts(opts) {
+    function setOpts(opts = {}) {
 
         _interval = ("interval" in opts && opts.interval != null) ? opts.interval : HOUR_MS; // set default interval between location updates
         _sendLocationOnce = ("sendOnce" in opts && opts.sendOnce != null) ? opts.sendOnce : false;
@@ -74,8 +78,15 @@ class Conctr {
         _locationRecording = ("isEnabled" in opts  && opts.isEnabled != null) ? opts.isEnabled : _locationRecording;
         _locationTimeout = hardware.millis();
         _locationSent = false;
+        if(_DEBUG){
+            server.log("CONCTR: setting agent options from device.");
+        }
+        setAgentOpts(opts);
     }
 
+    function setAgentOpts(opts){
+        agent.send(AGENT_OPTS,opts);
+    }
 
     /**
      * @param  {Table} payload - Table containing data to be persisted
@@ -89,7 +100,7 @@ class Conctr {
 
         // set timestamp to now if not already set
         if (!("_ts" in payload) || (payload._ts == null)) {
-            payload._ts <-time();
+            payload._ts <- time();
         }
 
         // Add an unique id for tracking the response
@@ -105,9 +116,10 @@ class Conctr {
             // Store the callback for later
             if (callback) _onResponse[payload._id] <- callback;
 
-            payload._source="impdevice";
+            payload._source<-SOURCE_DEVICE;
 
             agent.send("conctr_data", payload);
+
         });
 
     }
@@ -137,15 +149,12 @@ class Conctr {
      * @return {[type]} [description]
      */
     function _handleLocReq(arg){
+
         if(_DEBUG){
             server.log("CONCTR: recieved a location request from agent");
         }
-        _getWifis(function(wifis){
-            if(_DEBUG){
-                server.log("CONCTR: responding to agent location request");
-            }
-            agent.send(LOCATION_RESP,wifis);
-        })
+
+        sendData({});
     }
 
 
@@ -165,6 +174,7 @@ class Conctr {
             if(_DEBUG){
                 server.log("CONCTR: Location recording is not enabled");
             }
+
             // not recording location 
             return callback(null);
 

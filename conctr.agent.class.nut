@@ -12,8 +12,11 @@ class Conctr {
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ = "conctr_get_location";
     static LOCATION_RESP = "conctr_location";
+    static AGENT_OPTS = "conctr_agent_options";
+    static SOURCE_DEVICE = "impdevice";
 
-    _lastKnownLoc = null;
+    static HOUR_MS = 3600000;
+
 
     _api_key = null;
     _app_id = null;
@@ -23,7 +26,14 @@ class Conctr {
     _model = null;
     _dataApiEndpoint = null;
 
-    _DEBUG = false;
+    // Location recording options
+    _locationRecording = true;
+    _locationSent = false;
+    _locationTimeout = 0;
+    _interval = 0;
+    _sendLocationOnce = false;
+
+    _DEBUG = 0;
 
 
     /**
@@ -47,13 +57,13 @@ class Conctr {
         _env = (env == null) ? "core" : env;
         _device_id = (device_id == null) ? imp.configparams.deviceid : device_id;
 
-        _lastKnownLoc={"location":null,"ts":0};
-
         // Setup the endpoint url
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
+        _setLocationOpts();
 
         // Set up listeners for device events
         device.on(DATA_EVENT, sendData.bindenv(this));
+        device.on(AGENT_OPTS, _setLocationOpts.bindenv(this));
 
     }
 
@@ -62,7 +72,7 @@ class Conctr {
     /**
      * Set device unique identifier
      * 
-     *@param {String} device_id - Unique identifier for associated device. (Defaults to imp device id)
+     * @param {String} device_id - Unique identifier for associated device. (Defaults to imp device id)
      */
     function setDeviceId(device_id) {
         _device_id = (device_id == null) ? imp.configparams.deviceid : device_id;
@@ -88,13 +98,11 @@ class Conctr {
         // Capture all the data ids in an array
         local ids = [];
 
-        local currentWifis=null;
-
         // Add the model id to each of the payloads
         if (typeof payload == "array") {
 
             // It's an array of tables
-            foreach (k,v in payload) {
+            foreach (k, v in payload) {
                 if (typeof v != "table") {
                     throw "Conctr: Payload must contain a table or an array of tables";
                 }
@@ -107,54 +115,27 @@ class Conctr {
                     payload[k]._ts <- time();
                 }
 
-                //cache the last known location if it is more recent then current cached value
-                if("_location" in payload[k] && payload[k]._ts > _lastKnownLoc.ts){
-                    _lastKnownLoc.location=payload[k]._location;
-                    _lastKnownLoc.ts=payload[k]._ts;
-                }
-
                 // Store the ids
                 if ("_id" in payload[k]) {
                     ids.push(payload[k]._id);
                     delete payload[k]._id;
                 }
 
+                if ("_location" in payload[k] && !_locationSent) {
+                    // Update _locationSent flag if payload has a location.
+                    _locationSent = true;
 
+                    //update timeout 
+                    _locationTimeout = _getUnixMS() + _interval;
 
-                //If location is not present in the payload and the payload did not come from the device request location from device. 
-                if(!("_location" in payload[k]) && (!("_source" in payload[k]) ||  ("_source" in payload[k] && payload[k]._source!="impdevice"))){
-                    if(currentWifis==null && device.isconnected()){
-                        if(_DEBUG){
-                            server.log("Retrieving location from device");
-                        }
-                        _getLocation(function(wifis){
-                            if(wifis!=null){
-                                currentWifis=wifis;
-                                _lastKnownLoc.location=wifis;
-                                _lastKnownLoc.ts=time();
-                                payload[k]._location <- wifis;
-                            }
-                                
-                            _postDataToConctr(payload[k],callback);
-
-                        }.bindenv(this));
-                    }else{
-
-                        if(_DEBUG){
-                            server.log("Skipping location request from device.");
-                        }
-
-                        if(currentWifis!=null){
-                            payload._location=currentWifis;
-                        }else{
-                            server.log("CONCTR: warning, could not get location from device as it is not connected.");
-                        }
-
-                        _postDataToConctr(payload[k],callback);
-                    }
-                }else{
-                    _postDataToConctr(payload[k],callback);
                 }
+
+                // If location is not present in the payload and the payload did not come from the device request location from device.
+                if (!("_location" in payload[k]) && (!("_source" in payload[k]) ||  ("_source" in payload[k] && payload[k]._source != SOURCE_DEVICE))){
+                    _getLocation();
+                }
+                
+                _postDataToConctr(payload[k], ids, callback);
 
             }
         } else {
@@ -164,17 +145,17 @@ class Conctr {
 
     }
 
-    function _postDataToConctr(payload,callback = null){
-
+    function _postDataToConctr(payload, ids, callback = null){
 
         local headers = {
             "Content-Type": "application/json",
             "Authorization": "api:" + _api_key
         };
 
-
         // Send the payload(s) to the endpoint
-        if (_DEBUG) server.log(format("CONCTR Sending: %s",http.jsonencode(payload)));
+        if (_DEBUG) {
+            server.log(format("Conctr: Sending: %s",http.jsonencode(payload)));
+        }
 
         local request = http.post(_dataApiEndpoint, headers, http.jsonencode(payload));
 
@@ -187,7 +168,9 @@ class Conctr {
             if (typeof response.body == "string" && response.body.len() > 0) {
                 try {
                     body = http.jsondecode(response.body)
+
                     if ("error" in body) error = body.error;
+
                 } catch (e) {
                     error = e;
                 }
@@ -200,8 +183,8 @@ class Conctr {
 
 
             if (_DEBUG) {
-                if (body) server.log("CONCTR Response: " + http.jsonencode(body));
-                if (error) server.log("CONCTR Error: " + http.jsonencode(error));
+                if (body) server.log("Conctr Response: " + http.jsonencode(body));
+                if (error) server.log("Conctr Error: " + http.jsonencode(error));
             }
 
             // Return the result
@@ -219,33 +202,70 @@ class Conctr {
     }
 
     /**
-     * Retrieves location (array of wifis) from device if conditions in current location sending opts are met, responds with null if conditions not met
-     * @param  {Function} callback [description]
+     * Sends a request to the device to send its current location (array of wifis) if conditions in current location sending opts are met. 
+     * Note: devcie will send through using its internal sendData function, we will not wait send location within the current payload.
+     * 
      */
-    function _getLocation(callback){
+    function _getLocation(){
 
         if(_DEBUG){
-            server.log("CONCTR:Requesting location from device.");
+            server.log("Conctr: Checking whether to retrieve location.");
         }
 
-        device.on(LOCATION_RESP,callback);
+         if (!_locationRecording) {
 
-        device.send(LOCATION_REQ,"");
+            if(_DEBUG){
+                server.log("Conctr: Location recording is not enabled");
+            }
+            // not recording location 
+            return;
 
-        
+        } else {
+            server.log("curr loc timeout "+_locationTimeout);
+            server.log("unix timestamp "+_getUnixMS());
+            server.log("_interval "+_interval);
+           
+            //check new location scan conditions are met and search for proximal wifi networks
+            if ((_sendLocationOnce == true && _locationSent == false) || ((_sendLocationOnce == false) && (_locationRecording == true) && (_locationTimeout < _getUnixMS()))) {
+                
+                if(_DEBUG){
+                    server.log("Conctr: Retrieving location from device");
+                }
 
+                //update timeout 
+                _locationTimeout = _getUnixMS() + _interval;
+
+                //update flagg to show we sent location.
+                _locationSent = true;
+
+                //Request location from device
+                device.send(LOCATION_REQ,"");
+
+            } else {
+                //conditions for new location search (using wifi networks) not met
+                return;
+            }
+        }
     }
 
-    /**
-     * Returns a table containing the last recieved location update from the device
-     * @return {Table} last known location with keys location and ts (timestamp) 
-     * {
-     *     location,
-     *     ts
-     * }
-     */
-    function getLastKnownLocation(){
-        return _lastKnownLoc;
+    function _getUnixMS(){
+
+        local ts = date();
+
+        return format("%d%03d", ts.time, ts.usec/1000).tointeger();
+    }
+
+    function _setLocationOpts(opts = {}){
+
+        if(_DEBUG){
+            server.log("Conctr: setting agent opts "+http.jsonencode(opts));
+        }
+
+        _interval = ("interval" in opts && opts.interval != null) ? opts.interval : HOUR_MS; // set default interval between location updates
+        _sendLocationOnce = ("sendOnce" in opts && opts.sendOnce != null) ? opts.sendOnce : false;
+        _locationRecording = ("isEnabled" in opts  && opts.isEnabled != null) ? opts.isEnabled : _locationRecording;
+        _locationTimeout = _getUnixMS();
+        _locationSent = false;
     }
 
     /**
