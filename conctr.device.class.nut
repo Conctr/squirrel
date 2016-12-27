@@ -12,7 +12,6 @@ class Conctr {
     static DATA_EVENT = "conctr_data";
 
     static LOCATION_REQ = "conctr_get_location";
-    static LOCATION_RESP = "conctr_location";
     static AGENT_OPTS = "conctr_agent_options";
     static SOURCE_DEVICE = "impdevice";
 
@@ -36,12 +35,12 @@ class Conctr {
      * 
      * @param opts - location recording options 
      * {
-     *   {Boolean}  send_loc - Should location be sent with data
-     *   {Integer}  send_loc_interval - Duration in milliseconds since last location update to wait before sending a new location
-     *   {Boolean}  send_loc_once - Setting to true sends the location of the device only once when the device restarts 
+     *   {Boolean}  sendLoc - Should location be sent with data
+     *   {Integer}  sendLocInterval - Duration in milliseconds since last location update to wait before sending a new location
+     *   {Boolean}  sendLocOnce - Setting to true sends the location of the device only once when the device restarts 
      *  }
      *
-     * NOTE: send_loc takes precedence over send_loc_once. Meaning if send_loc is set to false location will never be sent 
+     * NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
      *       with the data until this flag is changed.
      */
     constructor(opts = null) {
@@ -62,20 +61,20 @@ class Conctr {
      * 
      * @param opts {Table} - location recording options 
      * {
-     *   {Boolean}  send_loc - Should location be sent with data
-     *   {Integer}  send_loc_interval - Duration in milliseconds since last location update to wait before sending a new location
-     *   {Boolean}  send_loc_once - Setting to true sends the location of the device only once when the device restarts 
+     *   {Boolean}  sendLoc - Should location be sent with data
+     *   {Integer}  sendLocInterval - Duration in milliseconds since last location update to wait before sending a new location
+     *   {Boolean}  sendLocOnce - Setting to true sends the location of the device only once when the device restarts 
      *  }
      *
-     * NOTE: send_loc takes precedence over send_loc_once. Meaning if send_loc is set to false location will never be sent 
+     * NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
      *       with the data until this flag is changed.
      */
     function setOpts(opts = {}) {
 
-        _sendLocInterval = ("send_loc_interval" in opts && opts.send_loc_interval != null) ? opts.send_loc_interval : HOUR_MS; // set default send_loc_interval between location updates
-        _sendLocOnce = ("send_loc_once" in opts && opts.send_loc_once != null) ? opts.send_loc_once : false;
+        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_MS; // set default sendLocInterval between location updates
+        _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
 
-        _locationRecording = ("send_loc" in opts  && opts.send_loc != null) ? opts.send_loc : _locationRecording;
+        _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
         _locationTimeout = hardware.millis();
         _locationSent = false;
         if(_DEBUG){

@@ -13,6 +13,7 @@ class Conctr {
     static LOCATION_REQ = "conctr_get_location";
     static AGENT_OPTS = "conctr_agent_options";
     static SOURCE_DEVICE = "impdevice";
+    static SOURCE_AGENT = "impagent";
 
     static HOUR_MS = 3600000;
     static TIME_OFFSET = 1482794890;
@@ -37,25 +38,25 @@ class Conctr {
 
 
     /**
-     * @param  {String} app_id - Conctr application identifier
-     * @param  {String} api_key - Application specific api key from Conctr
+     * @param  {String} appId - Conctr application identifier
+     * @param  {String} apiKey - Application specific api key from Conctr
      * @param  {String} model_ref - Model reference used to validate data payloads by Conctr, including the version number
      * @param  {String} user - Unique identifier for associated device. (Defaults to imp device id)
      * @param  {String} region - (defaults to "us-west-2")
      * @param  {String} env - (defaults to "core")
      */
 
-    constructor(app_id, api_key, model_ref, use_agent_id = false,region = null, env = null) {
+    constructor(appId, apiKey, model_ref, useAgentId = false,region = null, env = null) {
 
-        assert(typeof app_id == "string");
-        assert(typeof api_key == "string");
+        assert(typeof appId == "string");
+        assert(typeof apiKey == "string");
 
-        _app_id = app_id;
-        _api_key = api_key;
+        _app_id = appId;
+        _api_key = apiKey;
         _model = model_ref;
         _region = (region == null) ? "us-west-2" : region;
         _env = (env == null) ? "staging" : env;
-        _device_id = (use_agent_id) ? split(http.agenturl(), "/").pop() : device_id;
+        _device_id = (useAgentId) ? split(http.agenturl(), "/").pop() : deviceId;
 
         // Setup the endpoint url
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
@@ -72,10 +73,10 @@ class Conctr {
     /**
      * Set device unique identifier
      * 
-     * @param {String} device_id - Unique identifier for associated device. (Defaults to imp device id)
+     * @param {String} deviceId - Unique identifier for associated device. (Defaults to imp device id)
      */
-    function setDeviceId(device_id = null) {
-        _device_id = (device_id == null) ? imp.configparams.deviceid : device_id;
+    function setDeviceId(deviceId = null) {
+        _device_id = (deviceId == null) ? imp.configparams.deviceid : deviceId;
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
     }
 
@@ -107,6 +108,10 @@ class Conctr {
                     throw "Conctr: Payload must contain a table or an array of tables";
                 }
 
+                if((!("_source" in v)){
+                    v._source <- SOURCE_AGENT;
+                }
+
                 // Set the model
                 v._model <- _model;
 
@@ -131,7 +136,7 @@ class Conctr {
                 }
 
                 // If location is not present in the payload and the payload did not come from the device request location from device.
-                if (!("_location" in v) && (!("_source" in v) ||  ("_source" in v && v._source != SOURCE_DEVICE))){
+                if (!("_location" in v) && v._source == SOURCE_AGENT){
                     _getLocation();
                 }
                 
@@ -269,12 +274,12 @@ class Conctr {
      * 
      * @param opts {Table} - location recording options 
      * {
-     *   {Boolean}  send_loc - Should location be sent with data
-     *   {Integer}  send_loc_interval - Duration in milliseconds since last location update to wait before sending a new location
-     *   {Boolean}  send_loc_once - Setting to true sends the location of the device only once when the device restarts 
+     *   {Boolean}  sendLoc - Should location be sent with data
+     *   {Integer}  sendLocInterval - Duration in milliseconds since last location update to wait before sending a new location
+     *   {Boolean}  sendLocOnce - Setting to true sends the location of the device only once when the device restarts 
      *  }
      *
-     * NOTE: send_loc takes precedence over send_loc_once. Meaning if send_loc is set to false location will never be sent 
+     * NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
      *       with the data until this flag is changed.
      */
     function _setOpts(opts = {}){
@@ -283,9 +288,9 @@ class Conctr {
             server.log("Conctr: setting agent opts "+http.jsonencode(opts));
         }
 
-        _sendLocInterval = ("send_loc_interval" in opts && opts.send_loc_interval != null) ? opts.send_loc_interval : HOUR_MS; // set default send_loc_interval between location updates
-        _sendLocOnce = ("send_loc_once" in opts && opts.send_loc_once != null) ? opts.send_loc_once : false;
-        _locationRecording = ("send_loc" in opts  && opts.send_loc != null) ? opts.send_loc : _locationRecording;
+        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_MS; // set default sendLocInterval between location updates
+        _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
+        _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
         _locationTimeout = _getUnixMS();
         _locationSent = false;
     }
@@ -293,18 +298,18 @@ class Conctr {
     /**
      * Forms and returns the insert data API endpoint for the current device and Conctr application
      *
-     * @param  {String} app_id
-     * @param  {String} device_id
+     * @param  {String} appId
+     * @param  {String} deviceId
      * @param  {String} region
      * @param  {String} env
      * @return {String} url endpoint that will accept the data payload
      */
-    function _formDataEndpointUrl(app_id, device_id, region, env) {
+    function _formDataEndpointUrl(appId, deviceId, region, env) {
 
         // This is the temporary value of the data endpoint.
-        return format("https://api.%s.conctr.com/data/apps/%s/devices/%s", env, app_id, device_id);
+        return format("https://api.%s.conctr.com/data/apps/%s/devices/%s", env, appId, deviceId);
         // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
-        //return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, app_id, device_id);
+        //return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
     }
 
 }
