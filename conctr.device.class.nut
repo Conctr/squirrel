@@ -11,15 +11,21 @@ class Conctr {
     // event to emit data payload
     static DATA_EVENT = "conctr_data";
 
+    static LOCATION_REQ = "conctr_get_location";
+    static AGENT_OPTS = "conctr_agent_options";
+    static SOURCE_DEVICE = "impdevice";
+
     // 1 hour in milliseconds
     static HOUR_MS = 3600000;
 
-    // Table parameters
+    // Location recording parameters
     _locationRecording = true;
     _locationSent = false;
     _locationTimeout = 0;
-    _interval = 0;
-    _sendLocationOnce = false;
+    _sendLocInterval = 0;
+    _sendLocOnce = false;
+
+    _DEBUG=false;
 
     // Callbacks
     _onResponse = null;
@@ -29,21 +35,24 @@ class Conctr {
      * 
      * @param opts - location recording options 
      * {
-     *   {Boolean}  isEnabled - Should location be sent with data
-     *   {Integer}  interval - Duration in milliseconds since last location update to wait before sending a new location
-     *   {Boolean}  sendOnce - Setting to true sends the location of the device only once when the device restarts 
+     *   {Boolean}  sendLoc - Should location be sent with data
+     *   {Integer}  sendLocInterval - Duration in milliseconds since last location update to wait before sending a new location
+     *   {Boolean}  sendLocOnce - Setting to true sends the location of the device only once when the device restarts 
      *  }
      *
-     * NOTE: isEnabled takes precedence over sendOnce. Meaning if isEnabled is set to false location will never be sent 
+     * NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
      *       with the data until this flag is changed.
      */
     constructor(opts = null) {
 
-        if (opts != null) setOpts(opts);
+        //Call setOpts even if opts is null so defaults are set and agent gets default opts.
+        setOpts(opts);
+
         _locationTimeout = hardware.millis();
         _onResponse = {};
 
         agent.on(DATA_EVENT, _doResponse.bindenv(this));
+        agent.on(LOCATION_REQ,_handleLocReq.bindenv(this));
     }
 
 
@@ -52,28 +61,31 @@ class Conctr {
      * 
      * @param opts {Table} - location recording options 
      * {
-     *   {Boolean}  isEnabled - Should location be sent with data
-     *   {Integer}  interval - Duration in milliseconds since last location update to wait before sending a new location
-     *   {Boolean}  sendOnce - Setting to true sends the location of the device only once when the device restarts 
+     *   {Boolean}  sendLoc - Should location be sent with data
+     *   {Integer}  sendLocInterval - Duration in milliseconds since last location update to wait before sending a new location
+     *   {Boolean}  sendLocOnce - Setting to true sends the location of the device only once when the device restarts 
      *  }
      *
-     * NOTE: isEnabled takes precedence over sendOnce. Meaning if isEnabled is set to false location will never be sent 
+     * NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
      *       with the data until this flag is changed.
      */
-    function setOpts(opts) {
+    function setOpts(opts = {}) {
 
-        _interval = ("interval" in opts && opts.interval != null) ? opts.interval : HOUR_MS; // set default interval between location updates
-        _sendLocationOnce = ("sendOnce" in opts && opts.sendOnce != null) ? opts.sendOnce : null;
+        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_MS; // set default sendLocInterval between location updates
+        _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
 
-        _locationRecording = ("isEnabled" in opts) ? opts.isEnabled : _locationRecording;
+        _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
         _locationTimeout = hardware.millis();
         _locationSent = false;
-
-        // TODO finish this. enabled only sends location every time, interval only sends it if the data update is
-        // after a certain interval since the last on and sendOnce only sends it once till device is rebooted
-
+        if(_DEBUG){
+            server.log("CONCTR: setting agent options from device.");
+        }
+        setAgentOpts(opts);
     }
 
+    function setAgentOpts(opts){
+        agent.send(AGENT_OPTS,opts);
+    }
 
     /**
      * @param  {Table} payload - Table containing data to be persisted
@@ -87,7 +99,7 @@ class Conctr {
 
         // set timestamp to now if not already set
         if (!("_ts" in payload) || (payload._ts == null)) {
-            payload._ts <-time();
+            payload._ts <- time();
         }
 
         // Add an unique id for tracking the response
@@ -102,7 +114,11 @@ class Conctr {
             // Todo: Add optional Bullwinkle here
             // Store the callback for later
             if (callback) _onResponse[payload._id] <- callback;
+
+            payload._source<-SOURCE_DEVICE;
+
             agent.send("conctr_data", payload);
+
         });
 
     }
@@ -127,6 +143,19 @@ class Conctr {
         }
     }
 
+    /**
+     * handles a location request from the agent and responsed with wifis.
+     * @return {[type]} [description]
+     */
+    function _handleLocReq(arg){
+
+        if(_DEBUG){
+            server.log("CONCTR: recieved a location request from agent");
+        }
+
+        sendData({});
+    }
+
 
 
     /**
@@ -141,18 +170,22 @@ class Conctr {
 
         if (!_locationRecording) {
 
+            if(_DEBUG){
+                server.log("CONCTR: Location recording is not enabled");
+            }
+
             // not recording location 
             return callback(null);
 
         } else {
 
             // check new location scan conditions are met and search for proximal wifi networks
-            if ((_sendLocationOnce != null) && (_locationSent == false) || ((_sendLocationOnce == null) && (_locationRecording == true) && (_locationTimeout < hardware.millis()))) {
+            if ((_sendLocOnce == true) && (_locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout < hardware.millis()))) {
 
                 local wifis = imp.scanwifinetworks();
 
                 // update timeout 
-                _locationTimeout = hardware.millis() + _interval;
+                _locationTimeout = hardware.millis() + _sendLocInterval;
                 _locationSent = true;
 
                 return callback(wifis);
