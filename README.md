@@ -15,17 +15,18 @@ To use this library you will need to :
 
 ## Agent Class Usage
 
-### Constructor: Conctr(*app_id, api_key, model[, region][, environment][, device_id]*)
-The constructor takes three required parameters: your application id, API key and model. There is also  three optional parameter, the region to be used (defaults to us-west-2), the environment (defualts to core) and the device id (defaults to electric imps device id).
+### Constructor: Conctr(*app_id, api_key, model[, use_agent_id][, region][, environment]*)
+The constructor takes three required parameters: your application id, API key and model. There is also  three optional parameter, the region to be used (defaults to us-west-2), the environment (defualts to staging) and the use_agent_id (defaults to false).
 
 | Key | Data Type | Required | Default Value | Description |
 | ----| --------------- | --------- | ----------- |----------- |
 | *app_id* | String | Yes | N/A | The application Id used to uniquely identify the application |
 | *api_key* | String | Yes  | N/A |  The api key that will be used to authenticate requests to Conctr|
 | *model* | String | Yes  | N/A |  The model created within the application that defines the data structure Conctr will expect from the device and will validate against. |
+| *use_agent_id* | Boolean | No | false | Flag used to determine whether the imp agent id or device id should be used as the primary identifier to Conctr for the data sent. See setDeviceId() to set a custom id.|
 | *region* | String | No  |us-west-2|  Region of the instance to use|
-| *environment* | String | No | core | Conctr environment to send data to. |
-| *device_id* | String | No | `imp.configparams.deviceid` | Custom unique identifier that Conctr should store data against for this device. |
+| *environment* | String | No | staging | Conctr environment to send data to. |
+
 
 ##### Example
 ```squirrel
@@ -40,7 +41,7 @@ conctr <- Conctr(APP_ID, API_KEY, MODEL);
 
 ## Agent Class Methods
 
-### setDeviceId(*device_id*)
+### setDeviceId(*[,device_id]*)
 
 The *setDeviceId()* allows you the set the unique identifier that will be used by conctr to identify the current device. 
 
@@ -82,24 +83,6 @@ conctr.sendData(curTempAndPressure, function(error, response) {
 });
 ```
 
-### getLastKnownLocation()
-
-The *getLastKnownLocation()* function returns a table containing the last known location and the timestamp it was recieved. 
-
-
-
-##### Example
-
-```squirrel
-local lastKnownLocation=conctr.getLastKnownLocation();
-
-//store the location to a variable
-local location = lastKnownLocation.location;
-
-//store the timestamp the location was cached
-local locationRecievedAt = lastKnownLocation.ts;
-```
-
 ## Device Class Usage
 
 ### Constructor: Conctr([*opts*])
@@ -111,18 +94,18 @@ A table containing any of the following keys may be passed into the Conctr const
 
 | Key | Data type | Default value | Description |
 | ----| --------------- | --------- | ----------- |
-| isEnabled | Boolean | `true` | When enabled, location data will be automatically included with the data payload|
-| interval | Integer | 3600000|  Duration in milliseconds since last location update to wait before sending a new location |
-| sendOnce | Boolean | `false` | Setting to `true` sends the location of the device only once when the device restarts |
+| send_loc | Boolean | `true` | When enabled, location data will be automatically included with the data payload|
+| send_loc_interval | Integer | 3600000|  Duration in milliseconds since last location update to wait before sending a new location |
+| send_loc_once | Boolean | `false` | Setting to `true` sends the location of the device only once when the device restarts |
  
- **NOTE: The *isEnabled* option takes precedence over *sendOnce*. Meaning if isEnabled is set to `false` location will never be sent with the data until this flag is changed.**
+ **NOTE: The *send_loc* option takes precedence over *send_loc_once*. Meaning if send_loc is set to `false` location will never be sent with the data until this flag is changed.**
  
 ##### Example
 ```squirrel
 #require "conctr.device.class.nut:1.0.0"
 
 //opts to override default location interval duration of 1 hour to 10 seconds 
-local opts = {interval : 10000}
+local opts = {send_loc_interval : 10000}
 
 conctr <- Conctr(opts);
 ```
@@ -138,9 +121,9 @@ A table containing any of the following keys may be passed into the Conctr const
 
 | Key | Data type | Default value | Description |
 | ----| --------------- | --------- | ----------- |
-| isEnabled | Boolean | `true` | When enabled, location data will be automatically included with the data payload|
-| interval | Integer | 3600000|  Duration in milliseconds since last location update to wait before sending a new location |
-| sendOnce | Boolean | `false` | Setting to `true` sends the location of the device only once when the device restarts |
+| send_loc | Boolean | `true` | When enabled, location data will be automatically included with the data payload|
+| send_loc_interval | Integer | 3600000|  Duration in milliseconds since last location update to wait before sending a new location |
+| send_loc_once | Boolean | `false` | Setting to `true` sends the location of the device only once when the device restarts |
  
  ### sendData(*payload[, callback]*)
 

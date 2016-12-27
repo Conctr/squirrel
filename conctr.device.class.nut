@@ -23,10 +23,10 @@ class Conctr {
     _locationRecording = true;
     _locationSent = false;
     _locationTimeout = 0;
-    _interval = 0;
-    _sendLocationOnce = false;
+    _sendLocInterval = 0;
+    _sendLocOnce = false;
 
-    _DEBUG=0;
+    _DEBUG=false;
 
     // Callbacks
     _onResponse = null;
@@ -36,12 +36,12 @@ class Conctr {
      * 
      * @param opts - location recording options 
      * {
-     *   {Boolean}  isEnabled - Should location be sent with data
-     *   {Integer}  interval - Duration in milliseconds since last location update to wait before sending a new location
-     *   {Boolean}  sendOnce - Setting to true sends the location of the device only once when the device restarts 
+     *   {Boolean}  send_loc - Should location be sent with data
+     *   {Integer}  send_loc_interval - Duration in milliseconds since last location update to wait before sending a new location
+     *   {Boolean}  send_loc_once - Setting to true sends the location of the device only once when the device restarts 
      *  }
      *
-     * NOTE: isEnabled takes precedence over sendOnce. Meaning if isEnabled is set to false location will never be sent 
+     * NOTE: send_loc takes precedence over send_loc_once. Meaning if send_loc is set to false location will never be sent 
      *       with the data until this flag is changed.
      */
     constructor(opts = null) {
@@ -62,20 +62,20 @@ class Conctr {
      * 
      * @param opts {Table} - location recording options 
      * {
-     *   {Boolean}  isEnabled - Should location be sent with data
-     *   {Integer}  interval - Duration in milliseconds since last location update to wait before sending a new location
-     *   {Boolean}  sendOnce - Setting to true sends the location of the device only once when the device restarts 
+     *   {Boolean}  send_loc - Should location be sent with data
+     *   {Integer}  send_loc_interval - Duration in milliseconds since last location update to wait before sending a new location
+     *   {Boolean}  send_loc_once - Setting to true sends the location of the device only once when the device restarts 
      *  }
      *
-     * NOTE: isEnabled takes precedence over sendOnce. Meaning if isEnabled is set to false location will never be sent 
+     * NOTE: send_loc takes precedence over send_loc_once. Meaning if send_loc is set to false location will never be sent 
      *       with the data until this flag is changed.
      */
     function setOpts(opts = {}) {
 
-        _interval = ("interval" in opts && opts.interval != null) ? opts.interval : HOUR_MS; // set default interval between location updates
-        _sendLocationOnce = ("sendOnce" in opts && opts.sendOnce != null) ? opts.sendOnce : false;
+        _sendLocInterval = ("send_loc_interval" in opts && opts.send_loc_interval != null) ? opts.send_loc_interval : HOUR_MS; // set default send_loc_interval between location updates
+        _sendLocOnce = ("send_loc_once" in opts && opts.send_loc_once != null) ? opts.send_loc_once : false;
 
-        _locationRecording = ("isEnabled" in opts  && opts.isEnabled != null) ? opts.isEnabled : _locationRecording;
+        _locationRecording = ("send_loc" in opts  && opts.send_loc != null) ? opts.send_loc : _locationRecording;
         _locationTimeout = hardware.millis();
         _locationSent = false;
         if(_DEBUG){
@@ -181,12 +181,12 @@ class Conctr {
         } else {
 
             // check new location scan conditions are met and search for proximal wifi networks
-            if ((_sendLocationOnce == true) && (_locationSent == false) || ((_sendLocationOnce == false) && (_locationRecording == true) && (_locationTimeout < hardware.millis()))) {
+            if ((_sendLocOnce == true) && (_locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout < hardware.millis()))) {
 
                 local wifis = imp.scanwifinetworks();
 
                 // update timeout 
-                _locationTimeout = hardware.millis() + _interval;
+                _locationTimeout = hardware.millis() + _sendLocInterval;
                 _locationSent = true;
 
                 return callback(wifis);

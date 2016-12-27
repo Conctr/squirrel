@@ -11,11 +11,11 @@ class Conctr {
 
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ = "conctr_get_location";
-    static LOCATION_RESP = "conctr_location";
     static AGENT_OPTS = "conctr_agent_options";
     static SOURCE_DEVICE = "impdevice";
 
     static HOUR_MS = 3600000;
+    static TIME_OFFSET = 1482794890;
 
 
     _api_key = null;
@@ -30,22 +30,22 @@ class Conctr {
     _locationRecording = true;
     _locationSent = false;
     _locationTimeout = 0;
-    _interval = 0;
-    _sendLocationOnce = false;
+    _sendLocInterval = 0;
+    _sendLocOnce = false;
 
-    _DEBUG = 0;
+    _DEBUG = false;
 
 
     /**
-     * @param  {String} app_id -
+     * @param  {String} app_id - Conctr application identifier
      * @param  {String} api_key - Application specific api key from Conctr
      * @param  {String} model_ref - Model reference used to validate data payloads by Conctr, including the version number
+     * @param  {String} user - Unique identifier for associated device. (Defaults to imp device id)
      * @param  {String} region - (defaults to "us-west-2")
      * @param  {String} env - (defaults to "core")
-     * @param  {String} device_id - Unique identifier for associated device. (Defaults to imp device id)
      */
 
-    constructor(app_id, api_key, model_ref, region = null, env = null, device_id = null) {
+    constructor(app_id, api_key, model_ref, use_agent_id = false,region = null, env = null) {
 
         assert(typeof app_id == "string");
         assert(typeof api_key == "string");
@@ -54,16 +54,16 @@ class Conctr {
         _api_key = api_key;
         _model = model_ref;
         _region = (region == null) ? "us-west-2" : region;
-        _env = (env == null) ? "core" : env;
-        _device_id = (device_id == null) ? imp.configparams.deviceid : device_id;
+        _env = (env == null) ? "staging" : env;
+        _device_id = (use_agent_id) ? split(http.agenturl(), "/").pop() : device_id;
 
         // Setup the endpoint url
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
-        _setLocationOpts();
+        _setOpts();
 
         // Set up listeners for device events
         device.on(DATA_EVENT, sendData.bindenv(this));
-        device.on(AGENT_OPTS, _setLocationOpts.bindenv(this));
+        device.on(AGENT_OPTS, _setOpts.bindenv(this));
 
     }
 
@@ -74,7 +74,7 @@ class Conctr {
      * 
      * @param {String} device_id - Unique identifier for associated device. (Defaults to imp device id)
      */
-    function setDeviceId(device_id) {
+    function setDeviceId(device_id = null) {
         _device_id = (device_id == null) ? imp.configparams.deviceid : device_id;
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
     }
@@ -108,34 +108,34 @@ class Conctr {
                 }
 
                 // Set the model
-                payload[k]._model <- _model;
+                v._model <- _model;
 
                 // Set the time stamp if not set already
-                if (!("_ts" in payload[k]) || (payload[k]._ts == null)) {
-                    payload[k]._ts <- time();
+                if (!("_ts" in v) || (v._ts == null)) {
+                    v._ts <- time();
                 }
 
                 // Store the ids
-                if ("_id" in payload[k]) {
-                    ids.push(payload[k]._id);
-                    delete payload[k]._id;
+                if ("_id" in v) {
+                    ids.push(v._id);
+                    delete v._id;
                 }
 
-                if ("_location" in payload[k] && !_locationSent) {
+                if ("_location" in v && !_locationSent) {
                     // Update _locationSent flag if payload has a location.
                     _locationSent = true;
 
                     //update timeout 
-                    _locationTimeout = _getUnixMS() + _interval;
+                    _locationTimeout = _getUnixMS() + _sendLocInterval;
 
                 }
 
                 // If location is not present in the payload and the payload did not come from the device request location from device.
-                if (!("_location" in payload[k]) && (!("_source" in payload[k]) ||  ("_source" in payload[k] && payload[k]._source != SOURCE_DEVICE))){
+                if (!("_location" in v) && (!("_source" in v) ||  ("_source" in v && v._source != SOURCE_DEVICE))){
                     _getLocation();
                 }
                 
-                _postDataToConctr(payload[k], ids, callback);
+                _postDataToConctr(v, ids, callback);
 
             }
         } else {
@@ -145,6 +145,12 @@ class Conctr {
 
     }
 
+    /**
+     * Posts data payload to Conctr.
+     * @param  {Table}   payload  Data to be sent to Conctr
+     * @param  {Array}   ids      Ids of callbacks to device
+     * @param  {Function} callback Optional callback for result.
+     */
     function _postDataToConctr(payload, ids, callback = null){
 
         local headers = {
@@ -203,7 +209,7 @@ class Conctr {
 
     /**
      * Sends a request to the device to send its current location (array of wifis) if conditions in current location sending opts are met. 
-     * Note: devcie will send through using its internal sendData function, we will not wait send location within the current payload.
+     * Note: device will send through using its internal sendData function, we will not wait send location within the current payload.
      * 
      */
     function _getLocation(){
@@ -221,19 +227,16 @@ class Conctr {
             return;
 
         } else {
-            server.log("curr loc timeout "+_locationTimeout);
-            server.log("unix timestamp "+_getUnixMS());
-            server.log("_interval "+_interval);
            
             //check new location scan conditions are met and search for proximal wifi networks
-            if ((_sendLocationOnce == true && _locationSent == false) || ((_sendLocationOnce == false) && (_locationRecording == true) && (_locationTimeout < _getUnixMS()))) {
+            if ((_sendLocOnce == true && _locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout < _getUnixMS()))) {
                 
                 if(_DEBUG){
                     server.log("Conctr: Retrieving location from device");
                 }
 
                 //update timeout 
-                _locationTimeout = _getUnixMS() + _interval;
+                _locationTimeout = _getUnixMS() + _sendLocInterval;
 
                 //update flagg to show we sent location.
                 _locationSent = true;
@@ -248,22 +251,41 @@ class Conctr {
         }
     }
 
+    /**
+     * returns on offset timestamp in unix format (milliseconds)
+     * @return {Number} Timestamp in milliseconds
+     */
     function _getUnixMS(){
 
         local ts = date();
 
-        return format("%d%03d", ts.time, ts.usec/1000).tointeger();
+        //subtract time with TIME_OFFSET to ensure resulting integer is under the max 
+        //possible integer value.
+        return format("%d%03d", ts.time - TIME_OFFSET, ts.usec/1000).tointeger();
     }
 
-    function _setLocationOpts(opts = {}){
+    /**
+     * Funtion to set location recording options
+     * 
+     * @param opts {Table} - location recording options 
+     * {
+     *   {Boolean}  send_loc - Should location be sent with data
+     *   {Integer}  send_loc_interval - Duration in milliseconds since last location update to wait before sending a new location
+     *   {Boolean}  send_loc_once - Setting to true sends the location of the device only once when the device restarts 
+     *  }
+     *
+     * NOTE: send_loc takes precedence over send_loc_once. Meaning if send_loc is set to false location will never be sent 
+     *       with the data until this flag is changed.
+     */
+    function _setOpts(opts = {}){
 
         if(_DEBUG){
             server.log("Conctr: setting agent opts "+http.jsonencode(opts));
         }
 
-        _interval = ("interval" in opts && opts.interval != null) ? opts.interval : HOUR_MS; // set default interval between location updates
-        _sendLocationOnce = ("sendOnce" in opts && opts.sendOnce != null) ? opts.sendOnce : false;
-        _locationRecording = ("isEnabled" in opts  && opts.isEnabled != null) ? opts.isEnabled : _locationRecording;
+        _sendLocInterval = ("send_loc_interval" in opts && opts.send_loc_interval != null) ? opts.send_loc_interval : HOUR_MS; // set default send_loc_interval between location updates
+        _sendLocOnce = ("send_loc_once" in opts && opts.send_loc_once != null) ? opts.send_loc_once : false;
+        _locationRecording = ("send_loc" in opts  && opts.send_loc != null) ? opts.send_loc : _locationRecording;
         _locationTimeout = _getUnixMS();
         _locationSent = false;
     }
