@@ -16,7 +16,7 @@ To use this library you will need to :
 ## Agent Class Usage
 
 ### Constructor: Conctr(*app_id, api_key, model[, use_agent_id][, region][, environment]*)
-The constructor takes three required parameters: your application id, API key and model. There is also  three optional parameter, the region to be used (defaults to us-west-2), the environment (defualts to staging) and the use_agent_id (defaults to false).
+The constructor takes three required parameters: your application id, API key and model. There is also  three optional parameter, the region to be used (defaults to us-west-2), the environment (defaults to staging) and the use_agent_id (defaults to false).
 
 | Key | Data Type | Required | Default Value | Description |
 | ----| --------------- | --------- | ----------- |----------- |
@@ -43,9 +43,9 @@ conctr <- Conctr(APP_ID, API_KEY, MODEL);
 
 ### setDeviceId(*[,device_id]*)
 
-The *setDeviceId()* allows you the set the unique identifier that will be used by conctr to identify the current device. 
+The *setDeviceId()* allows you the set the unique identifier that will be used by Conctr to identify the current device. 
 
-**NOTE: Changing the device id after creates a new device in Conctr. There will be no link between any data from this newly created device and the device data linked to the previous device id (if any).**
+**NOTE: Changing the device id after data has already been set previously will create a new device in Conctr. There will be no link between any data from this newly created device and the device data linked to the previous device id (if any).**
 
 | Key | Data Type | Required | Default Value | Description |
 | ----| --------------- | --------- | ----------- |----------- |
@@ -113,7 +113,7 @@ conctr <- Conctr(opts);
  
 ### setOpts([*opts*])
 
-Overrides the default options of the Conctr device class. Takes an optional table **opts**. Any keys that arent provided will be set back to defualts.
+Overrides the default options of the Conctr device class. Takes an optional table **opts**. Any keys that arent provided will be set back to defaults.
 
 **opts**
 
@@ -125,7 +125,7 @@ A table containing any of the following keys may be passed into the Conctr const
 | send_loc_interval | Integer | 3600000|  Duration in milliseconds since last location update to wait before sending a new location |
 | send_loc_once | Boolean | `false` | Setting to `true` sends the location of the device only once when the device restarts |
  
- ### sendData(*payload[, callback]*)
+### sendData(*payload[, callback]*)
 
 The *sendData()* is used to send a data payload to Conctr. This function emits the payload to as a "conctr_data" event. The agents sendData() function is called by the corresponding event listener and the payload is sent to Conctr via the data ingeston endpoint. 
 
