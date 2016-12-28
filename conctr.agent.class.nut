@@ -108,7 +108,7 @@ class Conctr {
                     throw "Conctr: Payload must contain a table or an array of tables";
                 }
 
-                if(!("_source" in v)){
+                if (!("_source" in v)) {
                     v._source <- SOURCE_AGENT;
                 }
 
@@ -136,7 +136,7 @@ class Conctr {
                 }
 
                 // If location is not present in the payload and the payload did not come from the device request location from device.
-                if (!("_location" in v) && v._source == SOURCE_AGENT){
+                if (!("_location" in v) && v._source == SOURCE_AGENT) {
                     _getLocation();
                 }
                 
@@ -156,12 +156,15 @@ class Conctr {
      * @param  {Array}   ids      Ids of callbacks to device
      * @param  {Function} callback Optional callback for result.
      */
-    function _postDataToConctr(payload, ids, callback = null){
+    function _postDataToConctr(payload, ids, callback = null) {
 
-        local headers = {
-            "Content-Type": "application/json",
-            "Authorization": "api:" + _api_key
-        };
+        local headers = {};
+        headers["Content-Type"] <- "application/json";
+        if (_api_key.find("api:") == null) {
+            headers["Authorization"] <- "api:" + _api_key;
+        } else {
+            headers["Authorization"] <- _api_key;
+        }
 
         // Send the payload(s) to the endpoint
         if (_DEBUG) {
@@ -217,15 +220,15 @@ class Conctr {
      * Note: device will send through using its internal sendData function, we will not wait send location within the current payload.
      * 
      */
-    function _getLocation(){
+    function _getLocation() {
 
-        if(_DEBUG){
+        if (_DEBUG) {
             server.log("Conctr: Checking whether to retrieve location.");
         }
 
          if (!_locationRecording) {
 
-            if(_DEBUG){
+            if (_DEBUG) {
                 server.log("Conctr: Location recording is not enabled");
             }
             // not recording location 
@@ -236,7 +239,7 @@ class Conctr {
             //check new location scan conditions are met and search for proximal wifi networks
             if ((_sendLocOnce == true && _locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout < _getUnixMS()))) {
                 
-                if(_DEBUG){
+                if (_DEBUG) {
                     server.log("Conctr: Retrieving location from device");
                 }
 
@@ -260,7 +263,7 @@ class Conctr {
      * returns on offset timestamp in unix format (milliseconds)
      * @return {Number} Timestamp in milliseconds
      */
-    function _getUnixMS(){
+    function _getUnixMS() {
 
         local ts = date();
 
@@ -282,9 +285,9 @@ class Conctr {
      * NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
      *       with the data until this flag is changed.
      */
-    function _setOpts(opts = {}){
+    function _setOpts(opts = {}) {
 
-        if(_DEBUG){
+        if (_DEBUG) {
             server.log("Conctr: setting agent opts "+http.jsonencode(opts));
         }
 
