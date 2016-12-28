@@ -108,7 +108,7 @@ class Conctr {
                     throw "Conctr: Payload must contain a table or an array of tables";
                 }
 
-                if((!("_source" in v)){
+                if(!("_source" in v)){
                     v._source <- SOURCE_AGENT;
                 }
 
