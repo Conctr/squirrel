@@ -10,7 +10,6 @@ class Conctr {
 
     // event to emit data payload
     static DATA_EVENT = "conctr_data";
-
     static LOCATION_REQ = "conctr_get_location";
     static AGENT_OPTS = "conctr_agent_options";
     static SOURCE_DEVICE = "impdevice";
@@ -25,7 +24,7 @@ class Conctr {
     _sendLocInterval = 0;
     _sendLocOnce = false;
 
-    _DEBUG=false;
+    _DEBUG = false;
 
     // Callbacks
     _onResponse = null;
@@ -45,11 +44,10 @@ class Conctr {
      */
     constructor(opts = null) {
 
-        //Call setOpts even if opts is null so defaults are set and agent gets default opts.
-        setOpts(opts);
-
-        _locationTimeout = hardware.millis();
         _onResponse = {};
+
+        // Call setOpts even if opts is null so defaults are set and agent gets default opts.
+        setOpts(opts);
 
         agent.on(DATA_EVENT, _doResponse.bindenv(this));
         agent.on(LOCATION_REQ,_handleLocReq.bindenv(this));
@@ -77,16 +75,24 @@ class Conctr {
         _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
         _locationTimeout = hardware.millis();
         _locationSent = false;
-        if(_DEBUG){
+        
+        if (_DEBUG) {
             server.log("CONCTR: setting agent options from device.");
         }
         setAgentOpts(opts);
     }
 
-    function setAgentOpts(opts){
+
+    /**
+     * @param  {Table} options - Table containing options to be sent to the agent
+     */
+    function setAgentOpts(opts) {
+        
         agent.send(AGENT_OPTS,opts);
+        
     }
 
+    
     /**
      * @param  {Table} payload - Table containing data to be persisted
      * @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
@@ -104,9 +110,12 @@ class Conctr {
 
         // Add an unique id for tracking the response
         payload._id <- format("%d:%d", hardware.millis(), hardware.micros());
+        payload._source <- SOURCE_DEVICE;
 
+        // Todo: Don't getWifis if the _location is already set
         _getWifis(function(wifis) {
 
+            // Store the location (wifis) if we have it and if it's not already set
             if ((wifis != null) && !("_location" in payload)) {
                 payload._location <- wifis;
             }
@@ -115,11 +124,9 @@ class Conctr {
             // Store the callback for later
             if (callback) _onResponse[payload._id] <- callback;
 
-            payload._source<-SOURCE_DEVICE;
-
             agent.send("conctr_data", payload);
 
-        });
+        }.bindenv(this));
 
     }
 
@@ -143,13 +150,14 @@ class Conctr {
         }
     }
 
+    
     /**
      * handles a location request from the agent and responsed with wifis.
      * @return {[type]} [description]
      */
-    function _handleLocReq(arg){
+    function _handleLocReq(arg) {
 
-        if(_DEBUG){
+        if (_DEBUG) {
             server.log("CONCTR: recieved a location request from agent");
         }
 
@@ -170,7 +178,7 @@ class Conctr {
 
         if (!_locationRecording) {
 
-            if(_DEBUG){
+            if (_DEBUG) {
                 server.log("CONCTR: Location recording is not enabled");
             }
 
