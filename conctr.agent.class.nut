@@ -56,7 +56,7 @@ class Conctr {
         _model = model_ref;
         _region = (region == null) ? "us-west-2" : region;
         _env = (env == null) ? "staging" : env;
-        _device_id = (useAgentId) ? split(http.agenturl(), "/").pop() : deviceId;
+        _device_id = (useAgentId) ? split(http.agenturl(), "/").pop() : imp.configparams.deviceid;
 
         // Setup the endpoint url
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
