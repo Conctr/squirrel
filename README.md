@@ -71,8 +71,7 @@ The *sendData()* method sends a data payload to Conctr via the data ingeston end
 ##### Example
 
 ```squirrel
-local curTempAndPressure = { "temperature" : 29,
-                      "pressure" : 1032}
+local curTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(curTempAndPressure, function(error, response) {
     if (error) {
@@ -105,8 +104,7 @@ A table containing any of the following keys may be passed into the Conctr const
 #require "conctr.device.class.nut:1.0.0"
 
 // opts to override default location interval duration of 1 hour to 60 seconds 
-local opts = {sendLocInterval : 60000}
-
+local opts = { "sendLocInterval" : 60000 };
 conctr <- Conctr(opts);
 ```
  
@@ -140,7 +138,6 @@ The *sendData()* is used to send a data payload to Conctr. This function emits t
 local curTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(curTempAndPressure, function(error, response) {
-
     if (error) {
         //handle error
     } else {
