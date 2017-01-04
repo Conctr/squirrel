@@ -81,6 +81,7 @@ conctr.sendData(curTempAndPressure, function(error, response) {
         //data was successfully recieved by Conctr
     }
 }.bindenv(this));
+```
 
 ## Device Class Usage
 
