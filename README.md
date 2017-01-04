@@ -75,13 +75,12 @@ local curTempAndPressure = { "temperature" : 29,
                       "pressure" : 1032}
 
 conctr.sendData(curTempAndPressure, function(error, response) {
-
     if (error) {
         //handle error
-    }
+    } else {
         //data was successfully recieved by Conctr
-});
-```
+    }
+}.bindenv(this));
 
 ## Device Class Usage
 
@@ -104,8 +103,8 @@ A table containing any of the following keys may be passed into the Conctr const
 ```squirrel
 #require "conctr.device.class.nut:1.0.0"
 
-//opts to override default location interval duration of 1 hour to 10 seconds 
-local opts = {sendLocInterval : 10000}
+// opts to override default location interval duration of 1 hour to 60 seconds 
+local opts = {sendLocInterval : 60000}
 
 conctr <- Conctr(opts);
 ```
@@ -137,16 +136,16 @@ The *sendData()* is used to send a data payload to Conctr. This function emits t
 ##### Example
 
 ```squirrel
-local curTempAndPressure = { "temperature" : 29,
-                      "pressure" : 1032}
+local curTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(curTempAndPressure, function(error, response) {
 
     if (error) {
         //handle error
-    }
+    } else {
         //data was successfully recieved by Conctr
-});
+    }
+}.bindenv(this));
 ```
 
 
