@@ -94,7 +94,7 @@ A table containing any of the following keys may be passed into the Conctr const
 | Key | Data type | Default value | Description |
 | ----| --------------- | --------- | ----------- |
 | sendLoc | Boolean | `true` | When enabled, location data will be automatically included with the data payload|
-| sendLocInterval | Integer | 3600000|  Duration in milliseconds since last location update to wait before sending a new location |
+| sendLocInterval | Integer | 3600 |  Duration in seconds between location updates |
 | sendLocOnce | Boolean | `false` | Setting to `true` sends the location of the device only once when the device restarts |
  
  **NOTE: The *sendLoc* option takes precedence over *sendLocOnce*. Meaning if sendLoc is set to `false` location will never be sent with the data until this flag is changed.**
@@ -103,8 +103,8 @@ A table containing any of the following keys may be passed into the Conctr const
 ```squirrel
 #require "conctr.device.class.nut:1.0.0"
 
-// opts to override default location interval duration of 1 hour to 60 seconds 
-local opts = { "sendLocInterval" : 60000 };
+// opts to override default location interval duration of 1 hour to 1 minute
+local opts = { "sendLocInterval" : 60 };
 conctr <- Conctr(opts);
 ```
  
@@ -120,7 +120,7 @@ A table containing any of the following keys may be passed into the Conctr const
 | Key | Data type | Default value | Description |
 | ----| --------------- | --------- | ----------- |
 | sendLoc | Boolean | `true` | When enabled, location data will be automatically included with the data payload|
-| sendLocInterval | Integer | 3600000|  Duration in milliseconds since last location update to wait before sending a new location |
+| sendLocInterval | Integer | 3600 |  Duration in seconds between location updates |
 | sendLocOnce | Boolean | `false` | Setting to `true` sends the location of the device only once when the device restarts |
  
 ### sendData(*payload[, callback]*)

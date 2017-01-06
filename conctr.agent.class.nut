@@ -1,5 +1,5 @@
 
-// Squirrel class to interface with the Conctr platform
+// Squirrel class to interface with the Conctr platform (http://conctr.com)
 
 // Copyright (c) 2016 Mystic Pants Pty Ltd
 // This file is licensed under the MIT License
@@ -15,8 +15,7 @@ class Conctr {
     static SOURCE_DEVICE = "impdevice";
     static SOURCE_AGENT = "impagent";
 
-    static HOUR_MS = 3600000;
-    static TIME_OFFSET = 1482794890;
+    static HOUR_SEC = 3600; // One hour in seconds
 
 
     _api_key = null;
@@ -131,7 +130,7 @@ class Conctr {
                     _locationSent = true;
 
                     //update timeout 
-                    _locationTimeout = _getUnixMS() + _sendLocInterval;
+                    _locationTimeout = time() + _sendLocInterval;
 
                 }
 
@@ -168,7 +167,8 @@ class Conctr {
 
         // Send the payload(s) to the endpoint
         if (_DEBUG) {
-            server.log(format("Conctr: Sending: %s",http.jsonencode(payload)));
+            server.log(format("Conctr: sending to %s", _dataApiEndpoint));
+            server.log(format("Conctr: %s", http.jsonencode(payload)));
         }
 
         local request = http.post(_dataApiEndpoint, headers, http.jsonencode(payload));
@@ -197,8 +197,8 @@ class Conctr {
 
 
             if (_DEBUG) {
-                if (body) server.log("Conctr Response: " + http.jsonencode(body));
-                if (error) server.log("Conctr Error: " + http.jsonencode(error));
+                if (error) server.error("Conctr: " + http.jsonencode(error));
+                else if (body) server.log("Conctr: response: " + http.jsonencode(body));
             }
 
             // Return the result
@@ -222,14 +222,10 @@ class Conctr {
      */
     function _getLocation() {
 
-        if (_DEBUG) {
-            server.log("Conctr: Checking whether to retrieve location.");
-        }
-
-         if (!_locationRecording) {
+        if (!_locationRecording) {
 
             if (_DEBUG) {
-                server.log("Conctr: Location recording is not enabled");
+                server.log("Conctr: location recording is not enabled");
             }
             // not recording location 
             return;
@@ -237,14 +233,14 @@ class Conctr {
         } else {
            
             //check new location scan conditions are met and search for proximal wifi networks
-            if ((_sendLocOnce == true && _locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout < _getUnixMS()))) {
+            if ((_sendLocOnce == true && _locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout <= time()))) {
                 
                 if (_DEBUG) {
-                    server.log("Conctr: Retrieving location from device");
+                    server.log("Conctr: requesting location from device");
                 }
 
                 //update timeout 
-                _locationTimeout = _getUnixMS() + _sendLocInterval;
+                _locationTimeout = time() + _sendLocInterval;
 
                 //update flagg to show we sent location.
                 _locationSent = true;
@@ -260,25 +256,12 @@ class Conctr {
     }
 
     /**
-     * returns on offset timestamp in unix format (milliseconds)
-     * @return {Number} Timestamp in milliseconds
-     */
-    function _getUnixMS() {
-
-        local ts = date();
-
-        //subtract time with TIME_OFFSET to ensure resulting integer is under the max 
-        //possible integer value.
-        return format("%d%03d", ts.time - TIME_OFFSET, ts.usec/1000).tointeger();
-    }
-
-    /**
      * Funtion to set location recording options
      * 
      * @param opts {Table} - location recording options 
      * {
      *   {Boolean}  sendLoc - Should location be sent with data
-     *   {Integer}  sendLocInterval - Duration in milliseconds since last location update to wait before sending a new location
+     *   {Integer}  sendLocInterval - Duration in seconds between location updates
      *   {Boolean}  sendLocOnce - Setting to true sends the location of the device only once when the device restarts 
      *  }
      *
@@ -288,13 +271,12 @@ class Conctr {
     function _setOpts(opts = {}) {
 
         if (_DEBUG) {
-            server.log("Conctr: setting agent opts "+http.jsonencode(opts));
+            server.log("Conctr: setting agent opts to: " + http.jsonencode(opts));
         }
 
-        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_MS; // set default sendLocInterval between location updates
+        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_SEC; // set default sendLocInterval between location updates
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
         _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
-        _locationTimeout = _getUnixMS();
         _locationSent = false;
     }
 

@@ -15,7 +15,7 @@ class Conctr {
     static SOURCE_DEVICE = "impdevice";
 
     // 1 hour in milliseconds
-    static HOUR_MS = 3600000;
+    static HOUR_SEC = 3600;
 
     // Location recording parameters
     _locationRecording = true;
@@ -35,7 +35,7 @@ class Conctr {
      * @param opts - location recording options 
      * {
      *   {Boolean}  sendLoc - Should location be sent with data
-     *   {Integer}  sendLocInterval - Duration in milliseconds since last location update to wait before sending a new location
+     *   {Integer}  sendLocInterval - Duration in seconds between location updates
      *   {Boolean}  sendLocOnce - Setting to true sends the location of the device only once when the device restarts 
      *  }
      *
@@ -69,15 +69,15 @@ class Conctr {
      */
     function setOpts(opts = {}) {
 
-        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_MS; // set default sendLocInterval between location updates
+        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_SEC;
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
 
         _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
-        _locationTimeout = hardware.millis();
+        _locationTimeout = (hardware.millis() / 1000);
         _locationSent = false;
         
         if (_DEBUG) {
-            server.log("CONCTR: setting agent options from device.");
+            server.log("Conctr: setting agent options from device");
         }
         setAgentOpts(opts);
     }
@@ -158,7 +158,7 @@ class Conctr {
     function _handleLocReq(arg) {
 
         if (_DEBUG) {
-            server.log("CONCTR: recieved a location request from agent");
+            server.log("Conctr: recieved a location request from agent");
         }
 
         sendData({});
@@ -179,7 +179,7 @@ class Conctr {
         if (!_locationRecording) {
 
             if (_DEBUG) {
-                server.log("CONCTR: Location recording is not enabled");
+                server.log("Conctr: location recording is not enabled");
             }
 
             // not recording location 
@@ -188,12 +188,13 @@ class Conctr {
         } else {
 
             // check new location scan conditions are met and search for proximal wifi networks
-            if ((_sendLocOnce == true) && (_locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout < hardware.millis()))) {
+            local now = (hardware.millis() / 1000);
+            if ((_sendLocOnce == true) && (_locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout < now))) {
 
                 local wifis = imp.scanwifinetworks();
 
                 // update timeout 
-                _locationTimeout = hardware.millis() + _sendLocInterval;
+                _locationTimeout = now + _sendLocInterval;
                 _locationSent = true;
 
                 return callback(wifis);
