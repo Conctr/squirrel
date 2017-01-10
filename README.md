@@ -17,7 +17,7 @@ To use this library you will need to:
 
 ### Constructor: Conctr(*appId, apiKey, model[, useAgentId][, region][, environment]*)
 
-The constructor takes three required parameters: your application ID, API key and model. There are also three optional parameters: the region to be used (defaults to `"us-west-2"`), the environment (defaults to `"staging"`)) and the useAgentId (defaults to `false`).
+The constructor takes three required parameters: your application ID, API key and model. There are also three optional parameters: the region to be used (defaults to `"us-west-2"`), the environment (defaults to `"staging"`) and the *useAgentId* (defaults to `false`).
 
 | Key | Data Type | Required | Default Value | Description |
 | --- | --------- | -------- | ------------- | ----------- |
