@@ -6,7 +6,7 @@
 
 class Conctr {
 
-    static version = [1, 0, 0];
+    static version = [1, 0, 1];
 
     // event to emit data payload
     static DATA_EVENT = "conctr_data";

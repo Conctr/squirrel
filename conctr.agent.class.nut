@@ -7,7 +7,7 @@
 
 class Conctr {
 
-    static version = [1,0,0];
+    static version = [1,0,1];
 
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ = "conctr_get_location";
