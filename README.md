@@ -65,7 +65,7 @@ The *sendData()* method sends a data payload to Conctr via the data ingeston end
 
 | Key | Data type | Required | Description |
 | ----| --------------- | --------- | ----------- |
-| *payload* | Table | Yes | A table containing the data to be sent to Conctr. This keys in the table should correspond to fields from the model and the keys should be of type specified in the model.|
+| *payload* | Table/Array of Tables | Yes | A table or array containing the data to be sent to Conctr. The keys of each table in the data should correspond to fields from the model and/or Conctr metadata fields and should be of the type specified in the model.|
 | *callback* | Function | No | Function to be called on response from Conctr. function should take two arguements, error and response. When no error occurred the first arguement will be null.|
 
 ##### Example
@@ -129,7 +129,7 @@ The *sendData()* is used to send a data payload to Conctr. This function emits t
 
 | Key | Data type | Required | Description |
 | ----| --------------- | --------- | ----------- |
-| *payload* | Table | Yes | A table containing the data to be sent to Conctr. This keys in the table should correspond to fields from the model and the keys should be of type specified in the model.|
+| *payload* | Table/Array of Tables | Yes | A table or array containing the data to be sent to Conctr. The keys of each table in the data should correspond to fields from the model and/or Conctr metadata fields and should be of the type specified in the model.|
 | *callback* | Function | No | Function to be called on response from Conctr. function should take two arguements, error and response. When no error occurred the first arguement will be null.|
 
 ##### Example

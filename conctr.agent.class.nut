@@ -14,6 +14,7 @@ class Conctr {
     static AGENT_OPTS = "conctr_agent_options";
     static SOURCE_DEVICE = "impdevice";
     static SOURCE_AGENT = "impagent";
+    static MIN_TIME = 946684801; // Epoch timestamp for 00:01 AM 01/01/2000 (used for timestamp sanity check)
 
     static HOUR_SEC = 3600; // One hour in seconds
 
@@ -55,7 +56,7 @@ class Conctr {
         _model = model_ref;
         _region = (region == null) ? "us-west-2" : region;
         _env = (env == null) ? "staging" : env;
-        _device_id = (useAgentId) ? split(http.agenturl(), "/").pop() : imp.configparams.deviceid;
+        _device_id = (useAgentId == true) ? split(http.agenturl(), "/").pop() : imp.configparams.deviceid;
 
         // Setup the endpoint url
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
@@ -83,7 +84,7 @@ class Conctr {
     /**
      * Sends data for persistance to Conctr
      *
-     * @param  {Table} payload - Table containing data to be persisted
+     * @param  {Table or Array} payload - Table or Array containing data to be persisted
      * @param  {Function (err,response)} callback - Callback function on http resp from Conctr
      * @return {Null}
      * @throws {Exception} -
@@ -98,7 +99,6 @@ class Conctr {
         // Capture all the data ids in an array
         local ids = [];
 
-        // Add the model id to each of the payloads
         if (typeof payload == "array") {
 
             // It's an array of tables
@@ -108,6 +108,7 @@ class Conctr {
                 }
 
                 if (!("_source" in v)) {
+
                     v._source <- SOURCE_AGENT;
                 }
 
@@ -116,6 +117,9 @@ class Conctr {
 
                 // Set the time stamp if not set already
                 if (!("_ts" in v) || (v._ts == null)) {
+                    v._ts <- time();
+                }else if(("_ts" in v) && typeof v._ts == "number" && ((v._ts.tostring().len() <= 10) ? v._ts < MIN_TIME : v._ts < MIN_TIME*1000)){
+                    server.log("Conctr: Warning _ts must be after 1st Jan 2000. Setting to imps time() function.")
                     v._ts <- time();
                 }
 
@@ -139,9 +143,11 @@ class Conctr {
                     _getLocation();
                 }
                 
-                _postDataToConctr(v, ids, callback);
-
             }
+
+            // Send data to Conctr
+            _postDataToConctr(payload, ids, callback);
+
         } else {
             // This is not valid input
             throw "Conctr: Payload must contain a table or an array of tables";
@@ -227,6 +233,7 @@ class Conctr {
             if (_DEBUG) {
                 server.log("Conctr: location recording is not enabled");
             }
+
             // not recording location 
             return;
 
@@ -239,17 +246,17 @@ class Conctr {
                     server.log("Conctr: requesting location from device");
                 }
 
-                //update timeout 
+                // Update timeout 
                 _locationTimeout = time() + _sendLocInterval;
 
-                //update flagg to show we sent location.
+                // Update flagg to show we sent location.
                 _locationSent = true;
 
-                //Request location from device
+                // Request location from device
                 device.send(LOCATION_REQ,"");
 
             } else {
-                //conditions for new location search (using wifi networks) not met
+                // Conditions for new location search (using wifi networks) not met
                 return;
             }
         }
@@ -274,7 +281,7 @@ class Conctr {
             server.log("Conctr: setting agent opts to: " + http.jsonencode(opts));
         }
 
-        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_SEC; // set default sendLocInterval between location updates
+        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_SEC; // Set default sendLocInterval between location updates
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
         _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
         _locationSent = false;
@@ -293,6 +300,7 @@ class Conctr {
 
         // This is the temporary value of the data endpoint.
         return format("https://api.%s.conctr.com/data/apps/%s/devices/%s", env, appId, deviceId);
+
         // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
         //return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
     }

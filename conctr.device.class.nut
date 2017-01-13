@@ -73,7 +73,7 @@ class Conctr {
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
 
         _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
-        _locationTimeout = (hardware.millis() / 1000);
+        _locationTimeout = 0;
         _locationSent = false;
         
         if (_DEBUG) {
@@ -94,39 +94,59 @@ class Conctr {
 
     
     /**
-     * @param  {Table} payload - Table containing data to be persisted
+     * @param  {Table or Array} payload - Table or Array containing data to be persisted
      * @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
      */
     function sendData(payload, callback = null) {
 
-        if (typeof payload != "table") {
-            throw "Conctr: Payload must contain a table";
+        // If it's a table, make it an array
+        if (typeof payload == "table") {
+            payload = [ payload ];
         }
 
-        // set timestamp to now if not already set
-        if (!("_ts" in payload) || (payload._ts == null)) {
-            payload._ts <- time();
-        }
+        if (typeof payload == "array") {
 
-        // Add an unique id for tracking the response
-        payload._id <- format("%d:%d", hardware.millis(), hardware.micros());
-        payload._source <- SOURCE_DEVICE;
+            local payloadLength = payload.len();
 
-        // Todo: Don't getWifis if the _location is already set
-        _getWifis(function(wifis) {
+            // It's an array of tables
+            foreach (k, v in payload) {
+                // set timestamp to now if not already set
+                if (!("_ts" in v) || (v._ts == null)) {
+                    v._ts <- time();
+                }
 
-            // Store the location (wifis) if we have it and if it's not already set
-            if ((wifis != null) && !("_location" in payload)) {
-                payload._location <- wifis;
+                // Add an unique id for tracking the response
+                v._id <- format("%d:%d", hardware.millis(), hardware.micros());
+                v._source <- SOURCE_DEVICE;
+
+                // Todo: Don't getWifis if the _location is already set
+                _getWifis(function(wifis) {
+
+                    // Store the location (wifis) if we have it and if it's not already set
+                    if ((wifis != null) && !("_location" in payload)) {
+                        v._location <- wifis;
+                    }
+
+                    // Todo: Add optional Bullwinkle here
+                    // Store the callback for later
+                    if (callback) _onResponse[v._id] <- callback;
+
+                    //all payloads have been processed, send array to agent
+                    if (k == payloadLength-1) {
+
+                        if(_DEBUG){
+                            server.log("Conctr: Sending data to agent");
+                        }
+
+                        agent.send("conctr_data", payload);
+                    }
+
+                }.bindenv(this));
             }
-
-            // Todo: Add optional Bullwinkle here
-            // Store the callback for later
-            if (callback) _onResponse[payload._id] <- callback;
-
-            agent.send("conctr_data", payload);
-
-        }.bindenv(this));
+        }else {
+            // This is not valid input
+            throw "Conctr: Payload must contain a table or an array of tables";
+        }
 
     }
 
@@ -178,10 +198,6 @@ class Conctr {
 
         if (!_locationRecording) {
 
-            if (_DEBUG) {
-                server.log("Conctr: location recording is not enabled");
-            }
-
             // not recording location 
             return callback(null);
 
@@ -196,11 +212,9 @@ class Conctr {
                 // update timeout 
                 _locationTimeout = now + _sendLocInterval;
                 _locationSent = true;
-
                 return callback(wifis);
 
             } else {
-
                 // conditions for new location search (using wifi networks) not met
                 return callback(null);
 
