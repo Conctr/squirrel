@@ -108,7 +108,6 @@ class Conctr {
                 }
 
                 if (!("_source" in v)) {
-
                     v._source <- SOURCE_AGENT;
                 }
 
@@ -118,9 +117,11 @@ class Conctr {
                 // Set the time stamp if not set already
                 if (!("_ts" in v) || (v._ts == null)) {
                     v._ts <- time();
-                }else if(("_ts" in v) && typeof v._ts == "number" && ((v._ts.tostring().len() <= 10) ? v._ts < MIN_TIME : v._ts < MIN_TIME*1000)){
+                } else if (("_ts" in v) && (typeof v._ts == "number") && ((v._ts.tostring().len() <= 10) ? v._ts < MIN_TIME : v._ts < MIN_TIME*1000)){
+                    
                     server.log("Conctr: Warning _ts must be after 1st Jan 2000. Setting to imps time() function.")
                     v._ts <- time();
+
                 }
 
                 // Store the ids

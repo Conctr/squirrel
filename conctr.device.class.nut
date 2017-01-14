@@ -99,6 +99,8 @@ class Conctr {
      */
     function sendData(payload, callback = null) {
 
+        local wifis=null;
+
         // If it's a table, make it an array
         if (typeof payload == "table") {
             payload = [ payload ];
@@ -106,9 +108,6 @@ class Conctr {
 
         if (typeof payload == "array") {
 
-            local payloadLength = payload.len();
-
-            // It's an array of tables
             foreach (k, v in payload) {
                 // set timestamp to now if not already set
                 if (!("_ts" in v) || (v._ts == null)) {
@@ -119,30 +118,26 @@ class Conctr {
                 v._id <- format("%d:%d", hardware.millis(), hardware.micros());
                 v._source <- SOURCE_DEVICE;
 
-                // Todo: Don't getWifis if the _location is already set
-                _getWifis(function(wifis) {
+                if (!("_location" in payload) && _shouldSendLocation() && (wifis == null)) {
 
-                    // Store the location (wifis) if we have it and if it's not already set
-                    if ((wifis != null) && !("_location" in payload)) {
+                    wifis = imp.scanwifinetworks();
+                
+                    if (wifis != null) {
                         v._location <- wifis;
                     }
+                }
 
-                    // Todo: Add optional Bullwinkle here
-                    // Store the callback for later
-                    if (callback) _onResponse[v._id] <- callback;
+                // Todo: Add optional Bullwinkle here
+                // Store the callback for later
+                if (callback) _onResponse[v._id] <- callback;
 
-                    //all payloads have been processed, send array to agent
-                    if (k == payloadLength-1) {
-
-                        if(_DEBUG){
-                            server.log("Conctr: Sending data to agent");
-                        }
-
-                        agent.send("conctr_data", payload);
-                    }
-
-                }.bindenv(this));
+                if(_DEBUG){
+                    server.log("Conctr: Sending data to agent");
+                }
             }
+
+            agent.send("conctr_data", payload);
+            
         }else {
             // This is not valid input
             throw "Conctr: Payload must contain a table or an array of tables";
@@ -187,19 +182,17 @@ class Conctr {
 
 
     /**
-     * Checks current location recording options and calls the callback function with either currently available
-     * wifis or null fullfilment of current conditions based on current options
+     * Checks current location recording options and returns true if location should be sent
      * 
-     * @param  {Function} callback - called with wifi result 
-     * @return {onSuccess([Objects])} - Array of wifi objects
+     * @return {Boolean} - Returns true if location should be sent with the data.
      *
      */
-    function _getWifis(callback) {
+    function _shouldSendLocation() {
 
         if (!_locationRecording) {
 
             // not recording location 
-            return callback(null);
+            return false;
 
         } else {
 
@@ -207,16 +200,16 @@ class Conctr {
             local now = (hardware.millis() / 1000);
             if ((_sendLocOnce == true) && (_locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout < now))) {
 
-                local wifis = imp.scanwifinetworks();
+                
 
                 // update timeout 
                 _locationTimeout = now + _sendLocInterval;
                 _locationSent = true;
-                return callback(wifis);
+                return true;
 
             } else {
                 // conditions for new location search (using wifi networks) not met
-                return callback(null);
+                return false;
 
             }
         }
