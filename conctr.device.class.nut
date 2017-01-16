@@ -14,7 +14,7 @@ class Conctr {
     static AGENT_OPTS = "conctr_agent_options";
     static SOURCE_DEVICE = "impdevice";
 
-    // 1 hour in milliseconds
+    // 1 hour in seconds
     static HOUR_SEC = 3600;
 
     // Location recording parameters
@@ -88,7 +88,7 @@ class Conctr {
      */
     function setAgentOpts(opts) {
         
-        agent.send(AGENT_OPTS,opts);
+        agent.send(AGENT_OPTS, opts);
         
     }
 
@@ -99,7 +99,7 @@ class Conctr {
      */
     function sendData(payload, callback = null) {
 
-        local wifis=null;
+        local locationAdded = false;
 
         // If it's a table, make it an array
         if (typeof payload == "table") {
@@ -118,27 +118,27 @@ class Conctr {
                 v._id <- format("%d:%d", hardware.millis(), hardware.micros());
                 v._source <- SOURCE_DEVICE;
 
-                if (!("_location" in payload) && _shouldSendLocation() && (wifis == null)) {
+                // Add the location if require
+                if (!("_location" in v) && _shouldSendLocation() && !locationAdded) {
 
-                    wifis = imp.scanwifinetworks();
-                
+                    local wifis = imp.scanwifinetworks();                
                     if (wifis != null) {
                         v._location <- wifis;
+                        locationAdded = true;
                     }
                 }
 
-                // Todo: Add optional Bullwinkle here
-                // Store the callback for later
+                    // Store the callback for later
                 if (callback) _onResponse[v._id] <- callback;
 
-                if(_DEBUG){
+                if (_DEBUG){
                     server.log("Conctr: Sending data to agent");
                 }
             }
 
             agent.send("conctr_data", payload);
             
-        }else {
+        } else {
             // This is not valid input
             throw "Conctr: Payload must contain a table or an array of tables";
         }
@@ -198,9 +198,7 @@ class Conctr {
 
             // check new location scan conditions are met and search for proximal wifi networks
             local now = (hardware.millis() / 1000);
-            if ((_sendLocOnce == true) && (_locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout < now))) {
-
-                
+            if ((_locationSent == false) || ((_sendLocOnce == false) && (_locationTimeout - now < 0))) {
 
                 // update timeout 
                 _locationTimeout = now + _sendLocInterval;

@@ -1,4 +1,3 @@
-
 // Squirrel class to interface with the Conctr platform (http://conctr.com)
 
 // Copyright (c) 2016 Mystic Pants Pty Ltd
@@ -98,6 +97,7 @@ class Conctr {
 
         // Capture all the data ids in an array
         local ids = [];
+        local getLocation = true;
 
         if (typeof payload == "array") {
 
@@ -114,40 +114,55 @@ class Conctr {
                 // Set the model
                 v._model <- _model;
 
-                // Set the time stamp if not set already
-                if (!("_ts" in v) || (v._ts == null)) {
+                local shortTime = false;
+                if (("_ts" in v) && (typeof v._ts == "number")) {
+                    // Invalid numerical timestamp? Replace it.
+                    if (v._ts < MIN_TIME) {
+                        shortTime = true;
+                    }
+                } else if (("_ts" in v) && (typeof v._ts == "string")) {
+                    // Invalid string timestamp? Replace it.
+                    if (v._ts.len() <= 10 && v._ts.tointeger() < MIN_TIME) {
+                        shortTime = true;
+                    } else if (v._ts.len() > 10 && v._ts.tointeger() / 1000 < MIN_TIME) {
+                        shortTime = true;
+                    }
+                } else {
+                    // No timestamp? Add it now.
                     v._ts <- time();
-                } else if (("_ts" in v) && (typeof v._ts == "number") && ((v._ts.tostring().len() <= 10) ? v._ts < MIN_TIME : v._ts < MIN_TIME*1000)){
-                    
-                    server.log("Conctr: Warning _ts must be after 1st Jan 2000. Setting to imps time() function.")
-                    v._ts <- time();
-
                 }
 
+                if (shortTime) {
+                    server.log("Conctr: Warning _ts must be after 1st Jan 2000. Setting to imps time() function.")
+                    v._ts <- time();
+                }
+
+                if ("_location" in v) {
+
+                    // We have a location, we don't need another one
+                    getLocation = false;
+
+                    if (!_locationSent) {
+                        // If we have a new location the don't request another one unti the timeout
+                        _locationSent = true;
+                        _locationTimeout = time() + _sendLocInterval;
+                    }
+
+                } 
+                
                 // Store the ids
                 if ("_id" in v) {
                     ids.push(v._id);
                     delete v._id;
                 }
 
-                if ("_location" in v && !_locationSent) {
-                    // Update _locationSent flag if payload has a location.
-                    _locationSent = true;
-
-                    //update timeout 
-                    _locationTimeout = time() + _sendLocInterval;
-
-                }
-
-                // If location is not present in the payload and the payload did not come from the device request location from device.
-                if (!("_location" in v) && v._source == SOURCE_AGENT) {
-                    _getLocation();
-                }
-                
             }
 
             // Send data to Conctr
             _postDataToConctr(payload, ids, callback);
+
+            // Request the location
+            if (getLocation) _getLocation();
 
         } else {
             // This is not valid input
@@ -254,7 +269,7 @@ class Conctr {
                 _locationSent = true;
 
                 // Request location from device
-                device.send(LOCATION_REQ,"");
+                device.send(LOCATION_REQ, "");
 
             } else {
                 // Conditions for new location search (using wifi networks) not met
