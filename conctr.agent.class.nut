@@ -33,7 +33,7 @@ class Conctr {
     _sendLocInterval = 0;
     _sendLocOnce = false;
 
-    _DEBUG = true;
+    _DEBUG = false;
 
 
     /**
