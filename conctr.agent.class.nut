@@ -6,7 +6,7 @@
 
 class Conctr {
 
-    static version = [1,0,1];
+    static version = [1, 0, 1];
 
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ = "conctr_get_location";
@@ -33,7 +33,7 @@ class Conctr {
     _sendLocInterval = 0;
     _sendLocOnce = false;
 
-    _DEBUG = false;
+    _DEBUG = true;
 
 
     /**
@@ -45,7 +45,7 @@ class Conctr {
      * @param  {String} env - (defaults to "core")
      */
 
-    constructor(appId, apiKey, model_ref, useAgentId = false,region = null, env = null) {
+    constructor(appId, apiKey, model_ref, useAgentId = false, region = null, env = null) {
 
         assert(typeof appId == "string");
         assert(typeof apiKey == "string");
@@ -92,7 +92,7 @@ class Conctr {
 
         // If it's a table, make it an array
         if (typeof payload == "table") {
-            payload = [ payload ];
+            payload = [payload];
         }
 
         // Capture all the data ids in an array
@@ -115,17 +115,26 @@ class Conctr {
                 v._model <- _model;
 
                 local shortTime = false;
+
                 if (("_ts" in v) && (typeof v._ts == "number")) {
                     // Invalid numerical timestamp? Replace it.
                     if (v._ts < MIN_TIME) {
                         shortTime = true;
                     }
                 } else if (("_ts" in v) && (typeof v._ts == "string")) {
-                    // Invalid string timestamp? Replace it.
-                    if (v._ts.len() <= 10 && v._ts.tointeger() < MIN_TIME) {
-                        shortTime = true;
-                    } else if (v._ts.len() > 10 && v._ts.tointeger() / 1000 < MIN_TIME) {
-                        shortTime = true;
+
+                    local isNumRegex = regexp("^[0-9]*$");
+                    
+                    // check whether ts is a string of numbers only
+                    local isNumerical = (isNumRegex.capture(v._ts) != null);
+
+                    if (isNumerical == true) {
+                        // Invalid string timestamp? Replace it.
+                        if (v._ts.len() <= 10 && v._ts.tointeger() < MIN_TIME) {
+                            shortTime = true;
+                        } else if (v._ts.len() > 10 && v._ts.tointeger() / 1000 < MIN_TIME) {
+                            shortTime = true;
+                        }
                     }
                 } else {
                     // No timestamp? Add it now.
@@ -148,8 +157,8 @@ class Conctr {
                         _locationTimeout = time() + _sendLocInterval;
                     }
 
-                } 
-                
+                }
+
                 // Store the ids
                 if ("_id" in v) {
                     ids.push(v._id);
@@ -228,7 +237,7 @@ class Conctr {
                 callback(error, body);
             } else if (ids.len() > 0) {
                 // Send the result back to the device
-                local device_result = { "ids": ids, "body": body, "error": error};
+                local device_result = { "ids": ids, "body": body, "error": error };
                 device.send(DATA_EVENT, device_result);
             } else if (error != null) {
                 server.error("Conctr Error: " + error);
@@ -239,7 +248,7 @@ class Conctr {
 
     /**
      * Sends a request to the device to send its current location (array of wifis) if conditions in current location sending opts are met. 
-     * Note: device will send through using its internal sendData function, we will not wait send location within the current payload.
+     * Note: device will send through using its internal sendData function, we will not wait and send location within the current payload.
      * 
      */
     function _getLocation() {
@@ -254,10 +263,11 @@ class Conctr {
             return;
 
         } else {
-           
-            //check new location scan conditions are met and search for proximal wifi networks
-            if ((_sendLocOnce == true && _locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout <= time()))) {
-                
+
+            // check new location scan conditions are met and search for proximal wifi networks
+            local now = time();
+            if ((_locationSent == false) || ((_sendLocOnce == false) && (_locationTimeout - now < 0))) {
+
                 if (_DEBUG) {
                     server.log("Conctr: requesting location from device");
                 }
@@ -299,7 +309,7 @@ class Conctr {
 
         _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_SEC; // Set default sendLocInterval between location updates
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
-        _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
+        _locationRecording = ("sendLoc" in opts && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
         _locationSent = false;
     }
 
@@ -318,7 +328,7 @@ class Conctr {
         return format("https://api.%s.conctr.com/data/apps/%s/devices/%s", env, appId, deviceId);
 
         // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
-        //return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
+        // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
     }
 
 }

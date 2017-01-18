@@ -50,7 +50,7 @@ class Conctr {
         setOpts(opts);
 
         agent.on(DATA_EVENT, _doResponse.bindenv(this));
-        agent.on(LOCATION_REQ,_handleLocReq.bindenv(this));
+        agent.on(LOCATION_REQ, _handleLocReq.bindenv(this));
     }
 
 
@@ -72,10 +72,10 @@ class Conctr {
         _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_SEC;
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
 
-        _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
+        _locationRecording = ("sendLoc" in opts && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
         _locationTimeout = 0;
         _locationSent = false;
-        
+
         if (_DEBUG) {
             server.log("Conctr: setting agent options from device");
         }
@@ -87,12 +87,12 @@ class Conctr {
      * @param  {Table} options - Table containing options to be sent to the agent
      */
     function setAgentOpts(opts) {
-        
+
         agent.send(AGENT_OPTS, opts);
-        
+
     }
 
-    
+
     /**
      * @param  {Table or Array} payload - Table or Array containing data to be persisted
      * @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
@@ -103,7 +103,7 @@ class Conctr {
 
         // If it's a table, make it an array
         if (typeof payload == "table") {
-            payload = [ payload ];
+            payload = [payload];
         }
 
         if (typeof payload == "array") {
@@ -121,23 +121,23 @@ class Conctr {
                 // Add the location if require
                 if (!("_location" in v) && _shouldSendLocation() && !locationAdded) {
 
-                    local wifis = imp.scanwifinetworks();                
+                    local wifis = imp.scanwifinetworks();
                     if (wifis != null) {
                         v._location <- wifis;
                         locationAdded = true;
                     }
                 }
 
-                    // Store the callback for later
+                // Store the callback for later
                 if (callback) _onResponse[v._id] <- callback;
 
-                if (_DEBUG){
+                if (_DEBUG) {
                     server.log("Conctr: Sending data to agent");
                 }
             }
 
             agent.send("conctr_data", payload);
-            
+
         } else {
             // This is not valid input
             throw "Conctr: Payload must contain a table or an array of tables";
@@ -158,14 +158,14 @@ class Conctr {
      * 
      */
     function _doResponse(response) {
-        foreach(id in response.ids) {
+        foreach (id in response.ids) {
             if (id in _onResponse) {
                 _onResponse[id](response.error, response.body);
             }
         }
     }
 
-    
+
     /**
      * handles a location request from the agent and responsed with wifis.
      * @return {[type]} [description]
