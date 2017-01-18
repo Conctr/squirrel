@@ -11,7 +11,7 @@ To use this library you will need to :
 - Create an application.
 - Create a model within the application.
 
-**To add this library to your project, add** `#require "conctr.agent.class.nut:1.0.0"` **to the top of your agent code and add** `#require "conctr.device.class.nut:1.0.0"` **to the top of your device code.**
+**To add this library to your project, add** `#require "conctr.agent.class.nut:1.0.1"` **to the top of your agent code and add** `#require "conctr.device.class.nut:1.0.1"` **to the top of your device code.**
 
 ## Agent Class Usage
 
@@ -30,7 +30,7 @@ The constructor takes three required parameters: your application id, API key an
 
 ##### Example
 ```squirrel
-#require "conctr.agent.class.nut:1.0.0"
+#require "conctr.agent.class.nut:1.0.1"
 
 const API_KEY = "<YOUR API KEY>";
 const APP_ID = "<YOUR AUTHENTICATION TOKEN>";
@@ -65,7 +65,7 @@ The *sendData()* method sends a data payload to Conctr via the data ingeston end
 
 | Key | Data type | Required | Description |
 | ----| --------------- | --------- | ----------- |
-| *payload* | Table | Yes | A table containing the data to be sent to Conctr. This keys in the table should correspond to fields from the model and the keys should be of type specified in the model.|
+| *payload* | Table/Array of Tables | Yes | A table or array containing the data to be sent to Conctr. The keys of each table in the data should correspond to fields from the model and/or Conctr metadata fields and should be of the type specified in the model.|
 | *callback* | Function | No | Function to be called on response from Conctr. function should take two arguements, error and response. When no error occurred the first arguement will be null.|
 
 ##### Example
@@ -101,7 +101,7 @@ A table containing any of the following keys may be passed into the Conctr const
  
 ##### Example
 ```squirrel
-#require "conctr.device.class.nut:1.0.0"
+#require "conctr.device.class.nut:1.0.1"
 
 // opts to override default location interval duration of 1 hour to 1 minute
 local opts = { "sendLocInterval" : 60 };
@@ -129,7 +129,7 @@ The *sendData()* is used to send a data payload to Conctr. This function emits t
 
 | Key | Data type | Required | Description |
 | ----| --------------- | --------- | ----------- |
-| *payload* | Table | Yes | A table containing the data to be sent to Conctr. This keys in the table should correspond to fields from the model and the keys should be of type specified in the model.|
+| *payload* | Table/Array of Tables | Yes | A table or array containing the data to be sent to Conctr. The keys of each table in the data should correspond to fields from the model and/or Conctr metadata fields and should be of the type specified in the model.|
 | *callback* | Function | No | Function to be called on response from Conctr. function should take two arguements, error and response. When no error occurred the first arguement will be null.|
 
 ##### Example
