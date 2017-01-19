@@ -1,4 +1,3 @@
-
 // Squirrel class to interface with the Conctr platform (http://conctr.com)
 
 // Copyright (c) 2016 Mystic Pants Pty Ltd
@@ -7,13 +6,14 @@
 
 class Conctr {
 
-    static version = [1,0,0];
+    static version = [1, 0, 1];
 
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ = "conctr_get_location";
     static AGENT_OPTS = "conctr_agent_options";
     static SOURCE_DEVICE = "impdevice";
     static SOURCE_AGENT = "impagent";
+    static MIN_TIME = 946684801; // Epoch timestamp for 00:01 AM 01/01/2000 (used for timestamp sanity check)
 
     static HOUR_SEC = 3600; // One hour in seconds
 
@@ -45,7 +45,7 @@ class Conctr {
      * @param  {String} env - (defaults to "core")
      */
 
-    constructor(appId, apiKey, model_ref, useAgentId = false,region = null, env = null) {
+    constructor(appId, apiKey, model_ref, useAgentId = false, region = null, env = null) {
 
         assert(typeof appId == "string");
         assert(typeof apiKey == "string");
@@ -55,7 +55,7 @@ class Conctr {
         _model = model_ref;
         _region = (region == null) ? "us-west-2" : region;
         _env = (env == null) ? "staging" : env;
-        _device_id = (useAgentId) ? split(http.agenturl(), "/").pop() : imp.configparams.deviceid;
+        _device_id = (useAgentId == true) ? split(http.agenturl(), "/").pop() : imp.configparams.deviceid;
 
         // Setup the endpoint url
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
@@ -83,7 +83,7 @@ class Conctr {
     /**
      * Sends data for persistance to Conctr
      *
-     * @param  {Table} payload - Table containing data to be persisted
+     * @param  {Table or Array} payload - Table or Array containing data to be persisted
      * @param  {Function (err,response)} callback - Callback function on http resp from Conctr
      * @return {Null}
      * @throws {Exception} -
@@ -92,13 +92,13 @@ class Conctr {
 
         // If it's a table, make it an array
         if (typeof payload == "table") {
-            payload = [ payload ];
+            payload = [payload];
         }
 
         // Capture all the data ids in an array
         local ids = [];
+        local getLocation = true;
 
-        // Add the model id to each of the payloads
         if (typeof payload == "array") {
 
             // It's an array of tables
@@ -114,9 +114,49 @@ class Conctr {
                 // Set the model
                 v._model <- _model;
 
-                // Set the time stamp if not set already
-                if (!("_ts" in v) || (v._ts == null)) {
+                local shortTime = false;
+
+                if (("_ts" in v) && (typeof v._ts == "number")) {
+                    // Invalid numerical timestamp? Replace it.
+                    if (v._ts < MIN_TIME) {
+                        shortTime = true;
+                    }
+                } else if (("_ts" in v) && (typeof v._ts == "string")) {
+
+                    local isNumRegex = regexp("^[0-9]*$");
+                    
+                    // check whether ts is a string of numbers only
+                    local isNumerical = (isNumRegex.capture(v._ts) != null);
+
+                    if (isNumerical == true) {
+                        // Invalid string timestamp? Replace it.
+                        if (v._ts.len() <= 10 && v._ts.tointeger() < MIN_TIME) {
+                            shortTime = true;
+                        } else if (v._ts.len() > 10 && v._ts.tointeger() / 1000 < MIN_TIME) {
+                            shortTime = true;
+                        }
+                    }
+                } else {
+                    // No timestamp? Add it now.
                     v._ts <- time();
+                }
+
+                if (shortTime) {
+                    server.log("Conctr: Warning _ts must be after 1st Jan 2000. Setting to imps time() function.")
+                    v._ts <- time();
+                }
+
+                if ("_location" in v) {
+
+                    // We have a location, we don't need another one
+                    getLocation = false;
+
+                    if (!_locationSent) {
+                        // If we have a new location the don't request another one unti the timeout
+                        _locationSent = true;
+                        _locationTimeout = time() + _sendLocInterval;
+                    }
+
                 }
 
                 // Store the ids
@@ -125,23 +165,14 @@ class Conctr {
                     delete v._id;
                 }
 
-                if ("_location" in v && !_locationSent) {
-                    // Update _locationSent flag if payload has a location.
-                    _locationSent = true;
-
-                    //update timeout 
-                    _locationTimeout = time() + _sendLocInterval;
-
-                }
-
-                // If location is not present in the payload and the payload did not come from the device request location from device.
-                if (!("_location" in v) && v._source == SOURCE_AGENT) {
-                    _getLocation();
-                }
-                
-                _postDataToConctr(v, ids, callback);
-
             }
+
+            // Send data to Conctr
+            _postDataToConctr(payload, ids, callback);
+
+            // Request the location
+            if (getLocation) _getLocation();
+
         } else {
             // This is not valid input
             throw "Conctr: Payload must contain a table or an array of tables";
@@ -206,7 +237,7 @@ class Conctr {
                 callback(error, body);
             } else if (ids.len() > 0) {
                 // Send the result back to the device
-                local device_result = { "ids": ids, "body": body, "error": error};
+                local device_result = { "ids": ids, "body": body, "error": error };
                 device.send(DATA_EVENT, device_result);
             } else if (error != null) {
                 server.error("Conctr Error: " + error);
@@ -217,7 +248,7 @@ class Conctr {
 
     /**
      * Sends a request to the device to send its current location (array of wifis) if conditions in current location sending opts are met. 
-     * Note: device will send through using its internal sendData function, we will not wait send location within the current payload.
+     * Note: device will send through using its internal sendData function, we will not wait and send location within the current payload.
      * 
      */
     function _getLocation() {
@@ -227,29 +258,31 @@ class Conctr {
             if (_DEBUG) {
                 server.log("Conctr: location recording is not enabled");
             }
+
             // not recording location 
             return;
 
         } else {
-           
-            //check new location scan conditions are met and search for proximal wifi networks
-            if ((_sendLocOnce == true && _locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout <= time()))) {
-                
+
+            // check new location scan conditions are met and search for proximal wifi networks
+            local now = time();
+            if ((_locationSent == false) || ((_sendLocOnce == false) && (_locationTimeout - now < 0))) {
+
                 if (_DEBUG) {
                     server.log("Conctr: requesting location from device");
                 }
 
-                //update timeout 
+                // Update timeout 
                 _locationTimeout = time() + _sendLocInterval;
 
-                //update flagg to show we sent location.
+                // Update flagg to show we sent location.
                 _locationSent = true;
 
-                //Request location from device
-                device.send(LOCATION_REQ,"");
+                // Request location from device
+                device.send(LOCATION_REQ, "");
 
             } else {
-                //conditions for new location search (using wifi networks) not met
+                // Conditions for new location search (using wifi networks) not met
                 return;
             }
         }
@@ -274,9 +307,9 @@ class Conctr {
             server.log("Conctr: setting agent opts to: " + http.jsonencode(opts));
         }
 
-        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_SEC; // set default sendLocInterval between location updates
+        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_SEC; // Set default sendLocInterval between location updates
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
-        _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
+        _locationRecording = ("sendLoc" in opts && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
         _locationSent = false;
     }
 
@@ -293,8 +326,9 @@ class Conctr {
 
         // This is the temporary value of the data endpoint.
         return format("https://api.%s.conctr.com/data/apps/%s/devices/%s", env, appId, deviceId);
+
         // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
-        //return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
+        // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
     }
 
 }

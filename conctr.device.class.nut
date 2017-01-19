@@ -6,7 +6,7 @@
 
 class Conctr {
 
-    static version = [1, 0, 0];
+    static version = [1, 0, 1];
 
     // event to emit data payload
     static DATA_EVENT = "conctr_data";
@@ -14,7 +14,7 @@ class Conctr {
     static AGENT_OPTS = "conctr_agent_options";
     static SOURCE_DEVICE = "impdevice";
 
-    // 1 hour in milliseconds
+    // 1 hour in seconds
     static HOUR_SEC = 3600;
 
     // Location recording parameters
@@ -50,7 +50,7 @@ class Conctr {
         setOpts(opts);
 
         agent.on(DATA_EVENT, _doResponse.bindenv(this));
-        agent.on(LOCATION_REQ,_handleLocReq.bindenv(this));
+        agent.on(LOCATION_REQ, _handleLocReq.bindenv(this));
     }
 
 
@@ -72,10 +72,10 @@ class Conctr {
         _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_SEC;
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
 
-        _locationRecording = ("sendLoc" in opts  && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
-        _locationTimeout = (hardware.millis() / 1000);
+        _locationRecording = ("sendLoc" in opts && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
+        _locationTimeout = 0;
         _locationSent = false;
-        
+
         if (_DEBUG) {
             server.log("Conctr: setting agent options from device");
         }
@@ -87,46 +87,61 @@ class Conctr {
      * @param  {Table} options - Table containing options to be sent to the agent
      */
     function setAgentOpts(opts) {
-        
-        agent.send(AGENT_OPTS,opts);
-        
+
+        agent.send(AGENT_OPTS, opts);
+
     }
 
-    
+
     /**
-     * @param  {Table} payload - Table containing data to be persisted
+     * @param  {Table or Array} payload - Table or Array containing data to be persisted
      * @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
      */
     function sendData(payload, callback = null) {
 
-        if (typeof payload != "table") {
-            throw "Conctr: Payload must contain a table";
+        local locationAdded = false;
+
+        // If it's a table, make it an array
+        if (typeof payload == "table") {
+            payload = [payload];
         }
 
-        // set timestamp to now if not already set
-        if (!("_ts" in payload) || (payload._ts == null)) {
-            payload._ts <- time();
-        }
+        if (typeof payload == "array") {
 
-        // Add an unique id for tracking the response
-        payload._id <- format("%d:%d", hardware.millis(), hardware.micros());
-        payload._source <- SOURCE_DEVICE;
+            foreach (k, v in payload) {
+                // set timestamp to now if not already set
+                if (!("_ts" in v) || (v._ts == null)) {
+                    v._ts <- time();
+                }
 
-        // Todo: Don't getWifis if the _location is already set
-        _getWifis(function(wifis) {
+                // Add an unique id for tracking the response
+                v._id <- format("%d:%d", hardware.millis(), hardware.micros());
+                v._source <- SOURCE_DEVICE;
 
-            // Store the location (wifis) if we have it and if it's not already set
-            if ((wifis != null) && !("_location" in payload)) {
-                payload._location <- wifis;
+                // Add the location if require
+                if (!("_location" in v) && _shouldSendLocation() && !locationAdded) {
+
+                    local wifis = imp.scanwifinetworks();
+                    if (wifis != null) {
+                        v._location <- wifis;
+                        locationAdded = true;
+                    }
+                }
+
+                // Store the callback for later
+                if (callback) _onResponse[v._id] <- callback;
+
+                if (_DEBUG) {
+                    server.log("Conctr: Sending data to agent");
+                }
             }
-
-            // Todo: Add optional Bullwinkle here
-            // Store the callback for later
-            if (callback) _onResponse[payload._id] <- callback;
 
             agent.send("conctr_data", payload);
 
-        }.bindenv(this));
+        } else {
+            // This is not valid input
+            throw "Conctr: Payload must contain a table or an array of tables";
+        }
 
     }
 
@@ -143,14 +158,14 @@ class Conctr {
      * 
      */
     function _doResponse(response) {
-        foreach(id in response.ids) {
+        foreach (id in response.ids) {
             if (id in _onResponse) {
                 _onResponse[id](response.error, response.body);
             }
         }
     }
 
-    
+
     /**
      * handles a location request from the agent and responsed with wifis.
      * @return {[type]} [description]
@@ -167,42 +182,32 @@ class Conctr {
 
 
     /**
-     * Checks current location recording options and calls the callback function with either currently available
-     * wifis or null fullfilment of current conditions based on current options
+     * Checks current location recording options and returns true if location should be sent
      * 
-     * @param  {Function} callback - called with wifi result 
-     * @return {onSuccess([Objects])} - Array of wifi objects
+     * @return {Boolean} - Returns true if location should be sent with the data.
      *
      */
-    function _getWifis(callback) {
+    function _shouldSendLocation() {
 
         if (!_locationRecording) {
 
-            if (_DEBUG) {
-                server.log("Conctr: location recording is not enabled");
-            }
-
             // not recording location 
-            return callback(null);
+            return false;
 
         } else {
 
             // check new location scan conditions are met and search for proximal wifi networks
             local now = (hardware.millis() / 1000);
-            if ((_sendLocOnce == true) && (_locationSent == false) || ((_sendLocOnce == false) && (_locationRecording == true) && (_locationTimeout < now))) {
-
-                local wifis = imp.scanwifinetworks();
+            if ((_locationSent == false) || ((_sendLocOnce == false) && (_locationTimeout - now < 0))) {
 
                 // update timeout 
                 _locationTimeout = now + _sendLocInterval;
                 _locationSent = true;
-
-                return callback(wifis);
+                return true;
 
             } else {
-
                 // conditions for new location search (using wifi networks) not met
-                return callback(null);
+                return false;
 
             }
         }
