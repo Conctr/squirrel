@@ -6,7 +6,7 @@
 
 class Conctr {
 
-     static VERSION = "1.1.0";
+    static VERSION = "1.1.0";
 
     // event to emit data payload
     static DATA_EVENT = "conctr_data";
@@ -153,8 +153,8 @@ class Conctr {
      */
     function send(unusedKey, payload = null, callback = null) {
         if ((typeof unusedKey == "table" || typeof unusedKey == "array") && (payload == null || typeof payload == "function")) {
-                callback = payload;
-                payload = unusedKey;
+            callback = payload;
+            payload = unusedKey;
         }
         sendData(payload, callback);
     }

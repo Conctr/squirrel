@@ -6,7 +6,7 @@
 
 class Conctr {
 
-     static VERSION = "1.1.0";
+    static VERSION = "1.1.0";
 
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ = "conctr_get_location";
@@ -125,7 +125,7 @@ class Conctr {
                 } else if (("_ts" in v) && (typeof v._ts == "string")) {
 
                     local isNumRegex = regexp("^[0-9]*$");
-                    
+
                     // check whether ts is a string of numbers only
                     local isNumerical = (isNumRegex.capture(v._ts) != null);
 
