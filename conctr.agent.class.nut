@@ -250,7 +250,6 @@ class Conctr {
     /**
      * Sends a request to the device to send its current location (array of wifis) if conditions in current location sending opts are met. 
      * Note: device will send through using its internal sendData function, we will not wait and send location within the current payload.
-     * 
      */
     function _getLocation() {
 

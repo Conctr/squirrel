@@ -113,7 +113,7 @@ This method overrides the default options of the Conctr device class. Takes an o
 
 ### sendData(*payload[, callback]*)
 
-The *sendData()* method is used to send a data payload to Conctr. This function emits the payload to as a "conctr_data" event. The agents sendData() function is called by the corresponding event listener and the payload is sent to Conctr via the data ingeston endpoint. 
+The *sendData* method is used to send a data payload to Conctr. This function emits the payload to as a "conctr_data" event. The agents sendData() function is called by the corresponding event listener and the payload is sent to Conctr via the data ingeston endpoint. 
 
 | Key | Data Type | Required | Description |
 | --- | --------- | -------- | ----------- |
@@ -133,6 +133,32 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
     }
 }.bindenv(this));
 ```
+
+### send(*unusedKey, payload[, callback]*)
+
+Alias for *sendData* method above, allows for *conctr.send* to work using the same arguments as the Electic Imp internal `agent.send(key, payload)` 
+
+
+| Key | Data Type | Required | Description |
+| --- | --------- | -------- | ----------- |
+| *unusedKey* | String | Yes | A string that will be ignored. |
+| *payload* | Table | Yes | A table containing the data to be sent to Conctr. This keys in the table should correspond to fields from the model and the keys should be of type specified in the model |
+| *callback* | Function | No | Function to be called on response from Conctr. The function should take two arguements, *error* and *response*. When no error occurred, the first arguement will be null |
+
+#### Example
+
+```squirrel
+local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
+
+conctr.send("any string", currentTempAndPressure, function(error, response) {
+    if (error) {
+        server.error("Failed to deliver to Conctr: " + error);
+    } else {
+        server.log("Data was successfully recieved from the device by Conctr");
+    }
+}.bindenv(this));
+```
+
 
 ## License
 

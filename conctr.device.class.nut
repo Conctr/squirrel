@@ -145,6 +145,19 @@ class Conctr {
 
     }
 
+    /**
+     * Alias for sendData function, allows for conctr.send() to accept the same arguements as agent.send()
+     * @param  {String} unusedKey - An unused string
+     * @param  {Table or Array} payload - Table or Array containing data to be persisted
+     * @param  {{Function (err,response)} callback - Callback function on resp from Conctr through agent
+     */
+    function send(unusedKey, payload = null, callback = null) {
+        if ((typeof unusedKey == "table" || typeof unusedKey == "array") && (payload == null || typeof payload == "function")) {
+                callback = payload;
+                payload = unusedKey;
+        }
+        sendData(payload, callback);
+    }
 
     /**
      * Responds to callback associated with (callback) ids in response from agent
