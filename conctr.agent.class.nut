@@ -6,7 +6,7 @@
 
 class Conctr {
 
-    static version = [1, 0, 1];
+     static VERSION = "1.1.0";
 
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ = "conctr_get_location";
@@ -40,12 +40,15 @@ class Conctr {
      * @param  {String} appId - Conctr application identifier
      * @param  {String} apiKey - Application specific api key from Conctr
      * @param  {String} model_ref - Model reference used to validate data payloads by Conctr, including the version number
-     * @param  {String} user - Unique identifier for associated device. (Defaults to imp device id)
-     * @param  {String} region - (defaults to "us-west-2")
-     * @param  {String} env - (defaults to "core")
+     * @param opts - optional parameters
+     * {
+     *   {Boolean} useAgentId - Flag on whether to use agent id or device id as identifier to Conctr (defaults to false)
+     *   {String} region - Which region is application in (defaults to "us-west-2")
+     *   {String} env - What Conctr environment should be used(defaults to "staging")}
+     * }
      */
 
-    constructor(appId, apiKey, model_ref, useAgentId = false, region = null, env = null) {
+    constructor(appId, apiKey, model_ref, opts = {}) {
 
         assert(typeof appId == "string");
         assert(typeof apiKey == "string");
@@ -53,9 +56,9 @@ class Conctr {
         _app_id = appId;
         _api_key = apiKey;
         _model = model_ref;
-        _region = (region == null) ? "us-west-2" : region;
-        _env = (env == null) ? "staging" : env;
-        _device_id = (useAgentId == true) ? split(http.agenturl(), "/").pop() : imp.configparams.deviceid;
+        _region = (region in opts) ? "us-west-2" : opts.region;
+        _env = (env in opts) ? "staging" : opts.env;
+        _device_id = (useAgentId in opts && opts.useAgentId == true) ? split(http.agenturl(), "/").pop() : imp.configparams.deviceid;
 
         // Setup the endpoint url
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
@@ -116,7 +119,7 @@ class Conctr {
 
                 local shortTime = false;
 
-                if (("_ts" in v) && (typeof v._ts == "number")) {
+                if (("_ts" in v) && (typeof v._ts == "integer")) {
                     // Invalid numerical timestamp? Replace it.
                     if (v._ts < MIN_TIME) {
                         shortTime = true;

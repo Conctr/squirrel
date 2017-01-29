@@ -6,7 +6,7 @@
 
 class Conctr {
 
-    static version = [1, 0, 1];
+     static VERSION = "1.1.0";
 
     // event to emit data payload
     static DATA_EVENT = "conctr_data";
@@ -42,7 +42,7 @@ class Conctr {
      * NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
      *       with the data until this flag is changed.
      */
-    constructor(opts = null) {
+    constructor(opts = {}) {
 
         _onResponse = {};
 
