@@ -11,13 +11,13 @@ To use this library you will need to:
 - Create an application.
 - Create a model within the application.
 
-**To add this library to your project, add** `#require "conctr.agent.class.nut:1.0.0"` **to the top of your agent code and add** `#require "conctr.device.class.nut:1.0.0"` **to the top of your device code**
+**To add this library to your project, add** `#require "conctr.agent.class.nut:1.1.0"` **to the top of your agent code and add** `#require "conctr.device.class.nut:1.1.0"` **to the top of your device code**
 
 ## Agent Class Usage
 
 ### Constructor: Conctr(*appId, apiKey, model[, options]*)
 
-The constructor takes three required parameters: your application ID, API key and model. These details can be found by navigating into your application on the Conctr platform, selecting on the *models* tab in the left side menu then click on the example button under the model you wish to use and chose the tab marked *Squirell*. There are also three optional parameters: the region to be used (defaults to `"us-west-2"`), the environment (defaults to `"staging"`) and the *useAgentId* (defaults to `false`) which can be passed in within a table as the options parameter.
+The constructor takes three required parameters: your application ID, API key and model. These details can be found by navigating into your application on the Conctr platform, selecting on the *Models* tab in the left side menu then click on the *Example* button under the model you wish to use and chose the tab marked *Squirrel*. There are also three optional parameters: the region to be used (defaults to `"us-west-2"`), the environment (defaults to `"staging"`) and the *useAgentId* (defaults to `false`) which can be passed in within a table as the *Options* parameter.
 
 | Key | Data Type | Required | Default Value | Description |
 | --- | --------- | -------- | ------------- | ----------- |
@@ -31,7 +31,7 @@ The constructor takes three required parameters: your application ID, API key an
 #### Example
 
 ```squirrel
-#require "conctr.agent.class.nut:1.0.0"
+#require "conctr.agent.class.nut:1.1.0"
 
 const API_KEY = "<YOUR API KEY>";
 const APP_ID = "<YOUR AUTHENTICATION TOKEN>";
@@ -76,7 +76,7 @@ local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(currentTempAndPressure, function(error, response) {
     if (error) {
-        // Handle error
+        server.error("Failed to deliver to Conctr: " + error);
     } else {
         server.log("Data was successfully recieved by Conctr");
     }
@@ -100,7 +100,7 @@ Instantiates the Conctr device class. It takes an optional table, *options*, to 
 #### Example
 
 ```squirrel
-#require "conctr.device.class.nut:1.0.0"
+#require "conctr.device.class.nut:1.1.0"
 
 // Options to override default location interval duration of 1 hour to 1 minute
 local opts = { "sendLocInterval" : 60 };
@@ -127,7 +127,7 @@ local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(currentTempAndPressure, function(error, response) {
     if (error) {
-        // Handle error
+        server.error("Failed to deliver to Conctr: " + error);
     } else {
         server.log("Data was successfully recieved from the device by Conctr");
     }

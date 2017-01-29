@@ -15,7 +15,7 @@ class Conctr {
     static SOURCE_AGENT = "impagent";
     static MIN_TIME = 946684801; // Epoch timestamp for 00:01 AM 01/01/2000 (used for timestamp sanity check)
 
-    static HOUR_SEC = 3600; // One hour in seconds
+    static DEFAULT_LOC_INTERVAL = 3600; // One hour in seconds
 
 
     _api_key = null;
@@ -70,8 +70,6 @@ class Conctr {
 
     }
 
-
-
     /**
      * Set device unique identifier
      * 
@@ -95,7 +93,7 @@ class Conctr {
 
         // If it's a table, make it an array
         if (typeof payload == "table") {
-            payload = [payload];
+            payload = [ payload ];
         }
 
         // Capture all the data ids in an array
@@ -310,7 +308,7 @@ class Conctr {
             server.log("Conctr: setting agent opts to: " + http.jsonencode(opts));
         }
 
-        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : HOUR_SEC; // Set default sendLocInterval between location updates
+        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : DEFAULT_LOC_INTERVAL; // Set default sendLocInterval between location updates
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
         _locationRecording = ("sendLoc" in opts && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
         _locationSent = false;
