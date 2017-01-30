@@ -15,7 +15,7 @@ class Conctr {
     static SOURCE_DEVICE = "impdevice";
 
     // 1 hour in seconds
-    static HOUR_SEC = 3600;
+    static DEFAULT_LOC_INTERVAL = 3600;
 
     // Location recording parameters
     _locationRecording = true;
@@ -152,10 +152,6 @@ class Conctr {
      * @param  {{Function (err,response)} callback - Callback function on resp from Conctr through agent
      */
     function send(unusedKey, payload = null, callback = null) {
-        if ((typeof unusedKey == "table" || typeof unusedKey == "array") && (payload == null || typeof payload == "function")) {
-            callback = payload;
-            payload = unusedKey;
-        }
         sendData(payload, callback);
     }
 
