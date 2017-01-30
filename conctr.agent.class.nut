@@ -8,6 +8,7 @@ class Conctr {
 
     static VERSION = "1.1.0";
 
+
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ = "conctr_get_location";
     static AGENT_OPTS = "conctr_agent_options";
@@ -50,6 +51,7 @@ class Conctr {
 
     constructor(appId, apiKey, model_ref, opts = {}) {
 
+
         assert(typeof appId == "string");
         assert(typeof apiKey == "string");
 
@@ -59,6 +61,7 @@ class Conctr {
         _region = ("region" in opts) ? opts.region : "us-west-2";
         _env = ("env" in opts) ? opts.env : "staging";
         _device_id = ("useAgentId" in opts && opts.useAgentId == true) ? split(http.agenturl(), "/").pop() : imp.configparams.deviceid;
+
 
         // Setup the endpoint url
         _dataApiEndpoint = _formDataEndpointUrl(_app_id, _device_id, _region, _env);
@@ -93,7 +96,7 @@ class Conctr {
 
         // If it's a table, make it an array
         if (typeof payload == "table") {
-            payload = [ payload ];
+            payload = [payload];
         }
 
         // Capture all the data ids in an array
@@ -118,6 +121,7 @@ class Conctr {
                 local shortTime = false;
 
                 if (("_ts" in v) && (typeof v._ts == "integer")) {
+
                     // Invalid numerical timestamp? Replace it.
                     if (v._ts < MIN_TIME) {
                         shortTime = true;
@@ -250,6 +254,7 @@ class Conctr {
     /**
      * Sends a request to the device to send its current location (array of wifis) if conditions in current location sending opts are met. 
      * Note: device will send through using its internal sendData function, we will not wait and send location within the current payload.
+     *
      */
     function _getLocation() {
 
@@ -308,6 +313,7 @@ class Conctr {
         }
 
         _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : DEFAULT_LOC_INTERVAL; // Set default sendLocInterval between location updates
+
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
         _locationRecording = ("sendLoc" in opts && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
         _locationSent = false;

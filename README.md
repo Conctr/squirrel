@@ -13,6 +13,7 @@ To use this library you will need to:
 
 **To add this library to your project, add** `#require "conctr.agent.class.nut:1.1.0"` **to the top of your agent code and add** `#require "conctr.device.class.nut:1.1.0"` **to the top of your device code**
 
+
 ## Agent Class Usage
 
 ### Constructor: Conctr(*appId, apiKey, model[, options]*)
@@ -32,6 +33,7 @@ The constructor takes three required parameters: your application ID, API key an
 
 ```squirrel
 #require "conctr.agent.class.nut:1.1.0"
+
 
 const API_KEY = "<YOUR API KEY>";
 const APP_ID = "<YOUR AUTHENTICATION TOKEN>";
@@ -64,10 +66,11 @@ conctr.setDeviceId(CUSTOM_DEVICE_ID);
 
 The *sendData()* method sends a data payload to Conctr via the data ingeston endpoint. It is called by the data event listener when the device sends data using the Conctr device class. It can also be used directly to send data to Conctr via the agent alone.
 
-| Key | Data Type | Required | Description |
-| --- | --------- | -------- | ----------- |
-| *payload* | Table | Yes | A table containing the data to be sent to Conctr. The keys in the table should correspond to fields from the model and the keys should be of type specified in the model |
-| *callback* | Function | No | Function to be called on response from Conctr. The function should take two arguements, *error* and *response*. When no error occurred, the first arguement will be null |
+
+| Key | Data type | Required | Description |
+| ----| --------------- | --------- | ----------- |
+| *payload* | Table/Array of Tables | Yes | A table or array containing the data to be sent to Conctr. The keys of each table in the data should correspond to fields from the model and/or Conctr metadata fields and should be of the type specified in the model.|
+| *callback* | Function | No | Function to be called on response from Conctr. function should take two arguements, error and response. When no error occurred the first arguement will be null.|
 
 #### Example
 
@@ -101,6 +104,7 @@ Instantiates the Conctr device class. It takes an optional table, *options*, to 
 
 ```squirrel
 #require "conctr.device.class.nut:1.1.0"
+
 
 // Options to override default location interval duration of 1 hour to 1 minute
 local opts = { "sendLocInterval" : 60 };
@@ -139,11 +143,10 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
 Alias for *sendData* method above, allows for *conctr.send* to work using the same arguments as the Electic Imp internal `agent.send(key, payload)` 
 
 
-| Key | Data Type | Required | Description |
-| --- | --------- | -------- | ----------- |
-| *unusedKey* | String | Yes | A string that will be ignored. |
-| *payload* | Table | Yes | A table containing the data to be sent to Conctr. This keys in the table should correspond to fields from the model and the keys should be of type specified in the model |
-| *callback* | Function | No | Function to be called on response from Conctr. The function should take two arguements, *error* and *response*. When no error occurred, the first arguement will be null |
+| Key | Data type | Required | Description |
+| ----| --------------- | --------- | ----------- |
+| *payload* | Table/Array of Tables | Yes | A table or array containing the data to be sent to Conctr. The keys of each table in the data should correspond to fields from the model and/or Conctr metadata fields and should be of the type specified in the model.|
+| *callback* | Function | No | Function to be called on response from Conctr. function should take two arguements, error and response. When no error occurred the first arguement will be null.|
 
 #### Example
 

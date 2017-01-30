@@ -8,6 +8,7 @@ class Conctr {
 
     static VERSION = "1.1.0";
 
+
     // event to emit data payload
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ = "conctr_get_location";
@@ -16,6 +17,7 @@ class Conctr {
 
     // 1 hour in seconds
     static DEFAULT_LOC_INTERVAL = 3600;
+
 
     // Location recording parameters
     _locationRecording = true;
@@ -118,7 +120,7 @@ class Conctr {
                 v._id <- format("%d:%d", hardware.millis(), hardware.micros());
                 v._source <- SOURCE_DEVICE;
 
-                // Add the location if require
+                // Add the location if required
                 if (!("_location" in v) && _shouldSendLocation() && !locationAdded) {
 
                     local wifis = imp.scanwifinetworks();
@@ -130,6 +132,7 @@ class Conctr {
 
                 // Store the callback for later
                 if (callback) _onResponse[v._id] <- callback;
+
 
                 if (_DEBUG) {
                     server.log("Conctr: Sending data to agent");
