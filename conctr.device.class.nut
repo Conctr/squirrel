@@ -6,14 +6,14 @@
 
 class Conctr {
 
-    static VERSION = "1.1.0";
-
+    static VERSION = "2.0.0";
 
     // event to emit data payload
     static DATA_EVENT = "conctr_data";
-    static LOCATION_REQ = "conctr_get_location";
-    static AGENT_OPTS = "conctr_agent_options";
+    static LOCATION_REQ_EVENT = "conctr_get_location";
+    static AGENT_OPTS_EVENT = "conctr_agent_options";
     static SOURCE_DEVICE = "impdevice";
+    static AGENT_OPTS = ["sendLocInterval", "sendLocOnce", "sendLoc", "locationOnWakeReason"];
 
     // 1 hour in seconds
     static DEFAULT_LOC_INTERVAL = 3600;
@@ -25,80 +25,93 @@ class Conctr {
     _locationTimeout = 0;
     _sendLocInterval = 0;
     _sendLocOnce = false;
+    _locationOnWakeReason = [];
 
     _DEBUG = false;
+    _sender = null;
 
-    // Callbacks
-    _onResponse = null;
 
-    /**
-     * Constructor for Conctr
-     * 
-     * @param opts - location recording options 
-     * {
-     *   {Boolean}  sendLoc - Should location be sent with data
-     *   {Integer}  sendLocInterval - Duration in seconds between location updates
-     *   {Boolean}  sendLocOnce - Setting to true sends the location of the device only once when the device restarts 
-     *  }
-     *
-     * NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
-     *       with the data until this flag is changed.
-     */
+    // 
+    // Constructor for Conctr
+    // 
+    // @param opts - location recording options 
+    // {
+    //   {Boolean}  sendLoc             Should location be sent with data
+    //   {Integer}  sendLocInterval     Duration in seconds between location updates
+    //   {Boolean}  sendLocOnce         Setting to true sends the location of the device only once when the device restarts 
+    //   {Object}   sender optional     MessageManager object
+    //  }
+    // 
+    // NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
+    //       with the data until this flag is changed.
+    // 
     constructor(opts = {}) {
-
-        _onResponse = {};
-
-        // Call setOpts even if opts is null so defaults are set and agent gets default opts.
-        setOpts(opts);
-
-        agent.on(DATA_EVENT, _doResponse.bindenv(this));
-        agent.on(LOCATION_REQ, _handleLocReq.bindenv(this));
+        // TODO handle only one of the args passed in
+        _sender = ("messageManager" in opts) ? opts.messageManager : agent;
+        // Set up event listeners
+        _setupListeners();
+        // Set location recording options
+        setLocationOpts(opts);
     }
 
 
-    /**
-     * Funtion to set location recording options
-     * 
-     * @param opts {Table} - location recording options 
-     * {
-     *   {Boolean}  sendLoc - Should location be sent with data
-     *   {Integer}  sendLocInterval - Duration in milliseconds since last location update to wait before sending a new location
-     *   {Boolean}  sendLocOnce - Setting to true sends the location of the device only once when the device restarts 
-     *  }
-     *
-     * NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
-     *       with the data until this flag is changed.
-     */
-    function setOpts(opts = {}) {
+    // 
+    // Funtion to set location recording options
+    // 
+    // @param opts {Table} - location recording options 
+    // {
+    //   {Boolean}  sendLoc - Should location be sent with data
+    //   {Integer}  sendLocInterval - Duration in milliseconds since last location update to wait before sending a new location
+    //   {Boolean}  sendLocOnce - Setting to true sends the location of the device only once when the device restarts 
+    //  }
+    // 
+    // NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
+    //       with the data until this flag is changed.
+    // 
+    function setLocationOpts(opts = {}) {
 
         _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : DEFAULT_LOC_INTERVAL;
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
-
         _locationRecording = ("sendLoc" in opts && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
+        _locationOnWakeReason = ("locationOnWakeReason" in opts && opts.locationOnWakeReason != null) ? opts.locationOnWakeReason : [];
+
+        // Convert wake reasons to an array
+        if (typeof _locationOnWakeReason != "array") {
+            _locationOnWakeReason = [_locationOnWakeReason];
+            // Change the original so array check does not need to be done on agent
+            opts.locationOnWakeReason = _locationOnWakeReason;
+        }
+
         _locationTimeout = 0;
         _locationSent = false;
 
         if (_DEBUG) {
             server.log("Conctr: setting agent options from device");
         }
+
         setAgentOpts(opts);
     }
 
 
-    /**
-     * @param  {Table} options - Table containing options to be sent to the agent
-     */
+    // 
+    // @param  {Table} options - Table containing options to be sent to the agent
+    // 
     function setAgentOpts(opts) {
-
-        agent.send(AGENT_OPTS, opts);
-
+        local agent_opts = {};
+        // Get only relevant opts
+        foreach (opt in AGENT_OPTS) {
+            if (opt in opts) {
+                agent_opts[opt] <- opts[opt];
+            }
+        }
+        _sender.send(AGENT_OPTS_EVENT, agent_opts);
     }
 
 
-    /**
-     * @param  {Table or Array} payload - Table or Array containing data to be persisted
-     * @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
-     */
+    // 
+    // @param  {Table or Array} payload - Table or Array containing data to be persisted
+    // @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
+    // 
     function sendData(payload, callback = null) {
 
         local locationAdded = false;
@@ -116,89 +129,92 @@ class Conctr {
                     v._ts <- time();
                 }
 
-                // Add an unique id for tracking the response
-                v._id <- format("%d:%d", hardware.millis(), hardware.micros());
                 v._source <- SOURCE_DEVICE;
 
                 // Add the location if required
                 if (!("_location" in v) && _shouldSendLocation() && !locationAdded) {
 
                     local wifis = imp.scanwifinetworks();
-                    if (wifis != null) {
+                    if (wifis != null && wifis.len() > 0) {
                         v._location <- wifis;
                         locationAdded = true;
+                        // update timeout
+                        local now = (hardware.millis() / 1000);
+                        _locationTimeout = now + _sendLocInterval;
+                        _locationSent = true;
                     }
                 }
-
-                // Store the callback for later
-                if (callback) _onResponse[v._id] <- callback;
-
 
                 if (_DEBUG) {
                     server.log("Conctr: Sending data to agent");
                 }
             }
 
-            agent.send("conctr_data", payload);
+            local handler = _sender.send(DATA_EVENT, payload);
+            // Listen for a reply if using bullwinkle/message manager and theres a callback
+            if (callback && "onReply" in handler) {
+                handler.onReply(function(msg, response = null) {
+                    // Bullwinkle will send response in msg
+                    // messageManager will send response as second
+                    // arg, handle it here
+                    if (response != null) {
+                        msg = response;
+                    } else {
+                        msg = msg.data;
+                    }
+
+                    callback(msg.err, msg.resp);
+                });
+            }
 
         } else {
             // This is not valid input
             throw "Conctr: Payload must contain a table or an array of tables";
         }
-
     }
 
-    /**
-     * Alias for sendData function, allows for conctr.send() to accept the same arguements as agent.send()
-     * @param  {String} unusedKey - An unused string
-     * @param  {Table or Array} payload - Table or Array containing data to be persisted
-     * @param  {{Function (err,response)} callback - Callback function on resp from Conctr through agent
-     */
+    // 
+    // Alias for sendData function, allows for conctr.send() to accept the same arguements as _sender.send()
+    // @param  {String} unusedKey - An unused string
+    // @param  {Table or Array} payload - Table or Array containing data to be persisted
+    // @param  {{Function (err,response)} callback - Callback function on resp from Conctr through agent
+    // 
     function send(unusedKey, payload = null, callback = null) {
         sendData(payload, callback);
     }
 
-    /**
-     * Responds to callback associated with (callback) ids in response from agent
-     *
-     * @param response {Table} - response for callback from agent - 
-     * {
-     *     {String}  id - id of the callback that was stored in _onResponse
-     *     {Table}   error - error response from agent
-     *     {Boolean} body - response body from agent 
-     * }
-     * 
-     */
-    function _doResponse(response) {
-        foreach (id in response.ids) {
-            if (id in _onResponse) {
-                _onResponse[id](response.error, response.body);
-            }
-        }
+
+    // 
+    // Sets up event listeners
+    // 
+    function _setupListeners() {
+        _sender.on(LOCATION_REQ_EVENT, function(msg, reply = null) {
+            // Handle both agent.send and messageManager.send syntax
+            msg = ("data" in msg) ? msg.data : msg;
+            _handleLocReq(msg);
+        }.bindenv(this));
     }
 
 
-    /**
-     * handles a location request from the agent and responsed with wifis.
-     * @return {[type]} [description]
-     */
+    // 
+    // handles a location request from the agent and responsed with wifis.
+    // @return {[type]} [description]
+    // 
     function _handleLocReq(arg) {
 
         if (_DEBUG) {
             server.log("Conctr: recieved a location request from agent");
         }
-
         sendData({});
     }
 
 
-
-    /**
-     * Checks current location recording options and returns true if location should be sent
-     * 
-     * @return {Boolean} - Returns true if location should be sent with the data.
-     *
-     */
+    // 
+    // Checks current location recording options and returns true if location should be sent
+    // 
+    // @return {Boolean} - Returns true if location should be sent with the data.
+    // 
+    // 
     function _shouldSendLocation() {
 
         if (!_locationRecording) {
@@ -210,11 +226,11 @@ class Conctr {
 
             // check new location scan conditions are met and search for proximal wifi networks
             local now = (hardware.millis() / 1000);
-            if ((_locationSent == false) || ((_sendLocOnce == false) && (_locationTimeout - now < 0))) {
+            // If there are no wakereasons set under which to send loc send loc. or if there are and a matach to specified reasons found send loc.
+            local sendLocDueToWakeReason = (_locationOnWakeReason.len() == 0 || (_locationOnWakeReason.len() > 0 && _locationOnWakeReason.find(hardware.wakereason()) != null))
 
-                // update timeout 
-                _locationTimeout = now + _sendLocInterval;
-                _locationSent = true;
+            if (((_locationSent == false) && sendLocDueToWakeReason) || ((_sendLocOnce == false) && (_locationTimeout - now < 0) && sendLocDueToWakeReason)) {
+
                 return true;
 
             } else {
