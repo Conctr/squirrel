@@ -110,7 +110,7 @@ class Conctr {
     function getLocationOpts() {
         return {
             "sendLocOnce": _sendLocOnce,
-            "locationRecording": _locationRecording,
+            "sendLoc": _locationRecording,
             "sendLocInterval": _sendLocInterval,
             "locationOnWakeReason": _locationOnWakeReason
         }

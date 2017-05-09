@@ -94,6 +94,20 @@ class Conctr {
 
 
     // 
+    // returns current location opts
+    // @return {Table} recording opts
+    // 
+    function getLocationOpts() {
+        return {
+            "sendLocOnce": _sendLocOnce,
+            "sendLoc": _locationRecording,
+            "sendLocInterval": _sendLocInterval,
+            "locationOnWakeReason": _locationOnWakeReason
+        }
+    }
+
+
+    // 
     // @param  {Table} options - Table containing options to be sent to the agent
     // 
     function setAgentOpts(opts) {

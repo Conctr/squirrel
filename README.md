@@ -54,7 +54,7 @@ conctr.setDeviceId(CUSTOM_DEVICE_ID);
 
 ### getLocationOpts()
 
-Returns a table of currently set location recording options. There are four key values in the table. "sendLocOnce", "locationRecording", "sendLocInterval" and "locationOnWakeReason". See device constructor for more information on the data contained in these params.
+Returns a table of currently set location recording options. There are four key values in the table. "sendLocOnce", "sendLoc", "sendLocInterval" and "locationOnWakeReason". See device constructor for more information on the data contained in these params.
 
 
 #### Example
@@ -96,32 +96,44 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
 
 Instantiates the Conctr device class. It takes an optional table, *options*, to override default behaviour. *options* may contain any of the following keys:
 
+ 
+### setLocationOpts(*[options]*)
+
+Allows you to override the current location options. Calling the method without any arguements sets location recording to defualts.
+
+
 | Key | Data Type | Default Value | Description |
 | --- | --------- | ------------- | ----------- |
 | *options.sendLoc* | Boolean | `true` | When enabled, location data will be automatically included with the data payload |
 | *options.sendLocInterval* | Integer | 3600 | Duration in seconds between location updates |
 | *options.sendLocOnce* | Boolean | `false` | Setting to `true` sends the location of the device only once, when the device restarts |
 | *options.locationOnWakeReason* | Array/Integer | [] | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only. |
- | *options.messageManager* | Object | null | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) object. It will also accept an instantiated [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object or [ImpPager](https://github.com/electricimp/ReplayMessenger) object|
- 
-**Note** The *sendLoc* option takes precedence over *sendLocOnce*, ie. if *sendLoc* is set to `false` the device’s location will never be sent with the data until this flag is changed, even if *sendLocOnce* is set to `true`.
- 
+
 #### Example
 
 ```squirrel
 #require "conctr.device.class.nut:1.0.0"
 
-// Send location on blink up or pin wakeup only if it has been more than 60 seconds since last location update
+// change options to disable location sending altogether
 local opts = { 
-    "sendLocInterval" : 60,
-    "locationOnWakeReason":[WAKEREASON_BLINKUP, WAKEREASON_PIN]
+    "sendLoc" : false,
     };
-conctr <- Conctr(opts);
+conctr.setLocationOpts(opts)
 ```
- 
-### setOpts(*[options]*)
+### getLocationOpts()
 
-This method overrides the default options of the Conctr device class. Takes an optional table *options*. Any keys *(see Constructor, above)* that aren’t included will be set to their default values.
+Returns a table of currently set location recording options. There are four key values in the table. "sendLocOnce", "sendLoc", "sendLocInterval" and "locationOnWakeReason". See device constructor for more information on the data contained in these params.
+
+
+#### Example
+
+```squirrel
+...
+
+local locationOpts = conctr.getLocationOpts();
+
+..
+```
 
 ### sendData(*payload[, callback]*)
 
