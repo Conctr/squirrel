@@ -5,20 +5,9 @@ The Conctr library allows you to easily integrate your agent and device code wit
 Click [here](https://api.staging.conctr.com/docs) for the full documentation of the Conctr API.
 
 ### Setup
-
-To use this library you will need to:
-- [Register](https://staging.conctr.com/signup) for an account on the Conctr platform.
-- Create an application.
-- Create a model within the application.
-
-**To add this library to your project, add** `#require "conctr.agent.class.nut:1.1.0"` **to the top of your agent code and add** `#require "conctr.device.class.nut:1.1.0"` **to the top of your device code**
-
-
-## Agent Class Usage
-
 ### Constructor: Conctr(*appId, apiKey, model[, options]*)
 
-The constructor takes three required parameters: your application ID, API key and model. These details can be found by navigating into your application on the Conctr platform, selecting on the *Models* tab in the left side menu then click on the *Example* button under the model you wish to use and chose the tab marked *Squirrel*. There are also three optional parameters: the region to be used (defaults to `"us-west-2"`), the environment (defaults to `"staging"`) and the *useAgentId* (defaults to `false`) which can be passed in within a table as the *Options* parameter.
+The constructor takes three required parameters: your application ID, API key and model. These details can be found by navigating into your application on the Conctr platform, selecting on the *models* tab in the left side menu then click on the example button under the model you wish to use and chose the tab marked *Squirell*. There are also three optional parameters: the region to be used (defaults to `"us-west-2"`), the environment (defaults to `"staging"`) and the *useAgentId* (defaults to `false`) which can be passed in within a table as the options parameter.
 
 | Key | Data Type | Required | Default Value | Description |
 | --- | --------- | -------- | ------------- | ----------- |
@@ -28,12 +17,13 @@ The constructor takes three required parameters: your application ID, API key an
 | *options.useAgentId* | Boolean | No | false | Flag used to determine whether the imp agent ID or device ID should be used as the primary identifier to Conctr for the data sent. See *setDeviceId()* to set a custom ID |
 | *options.region* | String | No | `"us-west-2"` |  Region of the instance to use |
 | *options.environment* | String | No | `"staging"` | Conctr environment to send data to |
+| *options.rocky* | Object | No | null | An instantiated [Rocky](https://electricimp.com/docs/libraries/utilities/rocky/) object. |
+| *options.messageManager* | Object | No | null | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) object. It will also accept an instantiated [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object|
 
 #### Example
 
 ```squirrel
-#require "conctr.agent.class.nut:1.1.0"
-
+#require "conctr.agent.class.nut:1.0.0"
 
 const API_KEY = "<YOUR API KEY>";
 const APP_ID = "<YOUR AUTHENTICATION TOKEN>";
@@ -62,15 +52,29 @@ const CUSTOM_DEVICE_ID = "device-1";
 conctr.setDeviceId(CUSTOM_DEVICE_ID);
 ```
 
+### getLocationOpts()
+
+Returns a table of currently set location recording options. There are four key values in the table. "sendLocOnce", "sendLoc", "sendLocInterval" and "locationOnWakeReason". See device constructor for more information on the data contained in these params.
+
+
+#### Example
+
+```squirrel
+...
+
+local locationOpts = conctr.getLocationOpts();
+
+..
+```
+
 ### sendData(*payload[, callback]*)
 
 The *sendData()* method sends a data payload to Conctr via the data ingeston endpoint. It is called by the data event listener when the device sends data using the Conctr device class. It can also be used directly to send data to Conctr via the agent alone.
 
-
-| Key | Data type | Required | Description |
-| ----| --------------- | --------- | ----------- |
-| *payload* | Table/Array of Tables | Yes | A table or array containing the data to be sent to Conctr. The keys of each table in the data should correspond to fields from the model and/or Conctr metadata fields and should be of the type specified in the model.|
-| *callback* | Function | No | Function to be called on response from Conctr. function should take two arguements, error and response. When no error occurred the first arguement will be null.|
+| Key | Data Type | Required | Description |
+| --- | --------- | -------- | ----------- |
+| *payload* | Table | Yes | A table containing the data to be sent to Conctr. The keys in the table should correspond to fields from the model and the keys should be of type specified in the model |
+| *callback* | Function | No | Function to be called on response from Conctr. The function should take two arguements, *error* and *response*. When no error occurred, the first arguement will be null |
 
 #### Example
 
@@ -79,7 +83,7 @@ local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(currentTempAndPressure, function(error, response) {
     if (error) {
-        server.error("Failed to deliver to Conctr: " + error);
+        // Handle error
     } else {
         server.log("Data was successfully recieved by Conctr");
     }
@@ -92,32 +96,48 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
 
 Instantiates the Conctr device class. It takes an optional table, *options*, to override default behaviour. *options* may contain any of the following keys:
 
+ 
+### setLocationOpts(*[options]*)
+
+Allows you to override the current location options. Calling the method without any arguements sets location recording to defualts.
+
+
 | Key | Data Type | Default Value | Description |
 | --- | --------- | ------------- | ----------- |
 | *options.sendLoc* | Boolean | `true` | When enabled, location data will be automatically included with the data payload |
 | *options.sendLocInterval* | Integer | 3600 | Duration in seconds between location updates |
 | *options.sendLocOnce* | Boolean | `false` | Setting to `true` sends the location of the device only once, when the device restarts |
- 
-**Note** The *sendLoc* option takes precedence over *sendLocOnce*, ie. if *sendLoc* is set to `false` the device’s location will never be sent with the data until this flag is changed, even if *sendLocOnce* is set to `true`.
- 
+| *options.locationOnWakeReason* | Array/Integer | [] | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only. |
+
 #### Example
 
 ```squirrel
-#require "conctr.device.class.nut:1.1.0"
+#require "conctr.device.class.nut:1.0.0"
 
-
-// Options to override default location interval duration of 1 hour to 1 minute
-local opts = { "sendLocInterval" : 60 };
-conctr <- Conctr(opts);
+// change options to disable location sending altogether
+local opts = { 
+    "sendLoc" : false,
+    };
+conctr.setLocationOpts(opts)
 ```
- 
-### setOpts(*[options]*)
+### getLocationOpts()
 
-This method overrides the default options of the Conctr device class. Takes an optional table *options*. Any keys *(see Constructor, above)* that aren’t included will be set to their default values.
+Returns a table of currently set location recording options. There are four key values in the table. "sendLocOnce", "sendLoc", "sendLocInterval" and "locationOnWakeReason". See device constructor for more information on the data contained in these params.
+
+
+#### Example
+
+```squirrel
+...
+
+local locationOpts = conctr.getLocationOpts();
+
+..
+```
 
 ### sendData(*payload[, callback]*)
 
-The *sendData* method is used to send a data payload to Conctr. This function emits the payload to as a "conctr_data" event. The agents sendData() function is called by the corresponding event listener and the payload is sent to Conctr via the data ingeston endpoint. 
+The *sendData()* method is used to send a data payload to Conctr. This function emits the payload to as a "conctr_data" event. The agents sendData() function is called by the corresponding event listener and the payload is sent to Conctr via the data ingeston endpoint. 
 
 | Key | Data Type | Required | Description |
 | --- | --------- | -------- | ----------- |
@@ -131,37 +151,16 @@ local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(currentTempAndPressure, function(error, response) {
     if (error) {
-        server.error("Failed to deliver to Conctr: " + error);
+        // Handle error
     } else {
-        server.log("Data was successfully recieved from the device by Conctr");
+        server.log("Data was successfully received from the device by Conctr");
     }
 }.bindenv(this));
 ```
 
-### send(*unusedKey, payload[, callback]*)
+### send(*payload[, callback]*)
 
-Alias for *sendData* method above, allows for *conctr.send* to work using the same arguments as the Electic Imp internal `agent.send(key, payload)` 
-
-
-| Key | Data type | Required | Description |
-| ----| --------------- | --------- | ----------- |
-| *payload* | Table/Array of Tables | Yes | A table or array containing the data to be sent to Conctr. The keys of each table in the data should correspond to fields from the model and/or Conctr metadata fields and should be of the type specified in the model.|
-| *callback* | Function | No | Function to be called on response from Conctr. function should take two arguements, error and response. When no error occurred the first arguement will be null.|
-
-#### Example
-
-```squirrel
-local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
-
-conctr.send("any string", currentTempAndPressure, function(error, response) {
-    if (error) {
-        server.error("Failed to deliver to Conctr: " + error);
-    } else {
-        server.log("Data was successfully recieved from the device by Conctr");
-    }
-}.bindenv(this));
-```
-
+This is an alias for the sendData function above. 
 
 ## License
 
