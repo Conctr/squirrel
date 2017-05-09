@@ -10,7 +10,6 @@ class Conctr {
 
     static VERSION = "2.0.0";
 
-    // change these to consts, name them in a namespace
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ_EVENT = "conctr_get_location";
     static AGENT_OPTS_EVENT = "conctr_agent_options";
@@ -26,7 +25,7 @@ class Conctr {
     static RETRY_INTERVAL_DEFAULT = 5;
     static MAX_RETRY_INTERVAL = 60;
 
-
+    // Conctr Variables
     _api_key = null;
     _app_id = null;
     _device_id = null;
@@ -251,7 +250,7 @@ class Conctr {
                 // All good return
                 if (cb) return cb(null, resp);
             } else if (resp.statuscode == 429 || resp.statuscode < 200 || resp.statuscode > 500) {
-                // Want to retry these codes
+                // Want to retry these ^ codes
                 // Exponential back off or use a set interval
                 if (expBackoff == true) {
                     wakeupTime = (math.pow(2, retryNum - 1) < MAX_RETRY_INTERVAL) ? math.pow(2, retryNum - 1) : MAX_RETRY_INTERVAL;
@@ -368,7 +367,6 @@ class Conctr {
 
         // Set default sendLocInterval between location updates
         _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : DEFAULT_LOC_INTERVAL;
-
         _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
         _locationRecording = ("sendLoc" in opts && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
         _locationOnWakeReason = ("locationOnWakeReason" in opts && opts.locationOnWakeReason != null) ? opts.locationOnWakeReason : [];
