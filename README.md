@@ -5,6 +5,15 @@ The Conctr library allows you to easily integrate your agent and device code wit
 Click [here](https://api.staging.conctr.com/docs) for the full documentation of the Conctr API.
 
 ### Setup
+
+To use this library you will need to:
+- [Register](https://staging.conctr.com/signup) for an account on the Conctr platform.
+- Create an application.
+- Create a model within the application.
+
+**To add this library to your project, add** `#require "conctr.agent.class.nut:2.0.0"` **to the top of your agent code and add** `#require "conctr.device.class.nut:2.0.0"` **to the top of your device code**
+
+## Agent Class Usage
 ### Constructor: Conctr(*appId, apiKey, model[, options]*)
 
 The constructor takes three required parameters: your application ID, API key and model. These details can be found by navigating into your application on the Conctr platform, selecting on the *models* tab in the left side menu then click on the example button under the model you wish to use and chose the tab marked *Squirell*. There are also three optional parameters: the region to be used (defaults to `"us-west-2"`), the environment (defaults to `"staging"`) and the *useAgentId* (defaults to `false`) which can be passed in within a table as the options parameter.
@@ -23,7 +32,7 @@ The constructor takes three required parameters: your application ID, API key an
 #### Example
 
 ```squirrel
-#require "conctr.agent.class.nut:1.0.0"
+#require "conctr.agent.class.nut:2.0.0"
 
 const API_KEY = "<YOUR API KEY>";
 const APP_ID = "<YOUR AUTHENTICATION TOKEN>";
@@ -42,7 +51,7 @@ The *setDeviceId()* allows you the set the unique identifier that will be used b
 
 | Key | Data Type | Required | Default Value | Description |
 | --- | --------- | -------- | ------------- | ----------- |
-| *deviceId* | String | No | `"imp.configparams.deviceid"` | Custom unique identifier that Conctr should store data against for this device |
+| *deviceId* | String | No | `imp.configparams.deviceid` | Custom unique identifier that Conctr should store data against for this device |
 
 #### Example
 
@@ -52,20 +61,6 @@ const CUSTOM_DEVICE_ID = "device-1";
 conctr.setDeviceId(CUSTOM_DEVICE_ID);
 ```
 
-### getLocationOpts()
-
-Returns a table of currently set location recording options. There are four key values in the table. "sendLocOnce", "sendLoc", "sendLocInterval" and "locationOnWakeReason". See device constructor for more information on the data contained in these params.
-
-
-#### Example
-
-```squirrel
-...
-
-local locationOpts = conctr.getLocationOpts();
-
-..
-```
 
 ### sendData(*payload[, callback]*)
 
@@ -112,27 +107,13 @@ Allows you to override the current location options. Calling the method without 
 #### Example
 
 ```squirrel
-#require "conctr.device.class.nut:1.0.0"
+#require "conctr.device.class.nut:2.0.0"
 
 // change options to disable location sending altogether
 local opts = { 
     "sendLoc" : false,
     };
 conctr.setLocationOpts(opts)
-```
-### getLocationOpts()
-
-Returns a table of currently set location recording options. There are four key values in the table. "sendLocOnce", "sendLoc", "sendLocInterval" and "locationOnWakeReason". See device constructor for more information on the data contained in these params.
-
-
-#### Example
-
-```squirrel
-...
-
-local locationOpts = conctr.getLocationOpts();
-
-..
 ```
 
 ### sendData(*payload[, callback]*)

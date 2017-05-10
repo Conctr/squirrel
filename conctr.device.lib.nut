@@ -1,6 +1,6 @@
 // Squirrel class to interface with the Conctr platform
 
-// Copyright (c) 2016 Mystic Pants Pty Ltd
+// Copyright (c) 2016-2017 Mystic Pants Pty Ltd
 // This file is licensed under the MIT License
 // http://opensource.org/licenses/MIT
 
@@ -13,19 +13,19 @@ class Conctr {
     static LOCATION_REQ_EVENT = "conctr_get_location";
     static AGENT_OPTS_EVENT = "conctr_agent_options";
     static SOURCE_DEVICE = "impdevice";
-    static AGENT_OPTS = ["sendLocInterval", "sendLocOnce", "sendLoc", "locationOnWakeReason"];
+    static AGENT_OPTS = ["locInterval", "locSendOnce", "locRecording", "locOnWakeReason"];
 
     // 1 hour in seconds
     static DEFAULT_LOC_INTERVAL = 3600;
 
 
     // Location recording parameters
-    _locationRecording = true;
+    _locRecording = true;
     _locationSent = false;
     _locationTimeout = 0;
-    _sendLocInterval = 0;
-    _sendLocOnce = false;
-    _locationOnWakeReason = [];
+    _locInterval = 0;
+    _locSendOnce = false;
+    _locOnWakeReason = [];
 
     _DEBUG = false;
     _sender = null;
@@ -36,13 +36,13 @@ class Conctr {
     // 
     // @param opts - location recording options 
     // {
-    //   {Boolean}  sendLoc             Should location be sent with data
-    //   {Integer}  sendLocInterval     Duration in seconds between location updates
-    //   {Boolean}  sendLocOnce         Setting to true sends the location of the device only once when the device restarts 
+    //   {Boolean}  locRecording        Should location be sent with data
+    //   {Integer}  locInterval         Duration in seconds between location updates
+    //   {Boolean}  locSendOnce         Setting to true sends the location of the device only once when the device restarts 
     //   {Object}   sender optional     MessageManager object
     //  }
     // 
-    // NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
+    // NOTE: locRecording takes precedence over locSendOnce. Meaning if locRecording is set to false location will never be sent 
     //       with the data until this flag is changed.
     // 
     constructor(opts = {}) {
@@ -60,26 +60,26 @@ class Conctr {
     // 
     // @param opts {Table} - location recording options 
     // {
-    //   {Boolean}  sendLoc - Should location be sent with data
-    //   {Integer}  sendLocInterval - Duration in milliseconds since last location update to wait before sending a new location
-    //   {Boolean}  sendLocOnce - Setting to true sends the location of the device only once when the device restarts 
+    //   {Boolean}  locRecording - Should location be sent with data
+    //   {Integer}  locInterval - Duration in milliseconds since last location update to wait before sending a new location
+    //   {Boolean}  locSendOnce - Setting to true sends the location of the device only once when the device restarts 
     //  }
     // 
-    // NOTE: sendLoc takes precedence over sendLocOnce. Meaning if sendLoc is set to false location will never be sent 
+    // NOTE: locRecording takes precedence over locSendOnce. Meaning if locRecording is set to false location will never be sent 
     //       with the data until this flag is changed.
     // 
     function setLocationOpts(opts = {}) {
 
-        _sendLocInterval = ("sendLocInterval" in opts && opts.sendLocInterval != null) ? opts.sendLocInterval : DEFAULT_LOC_INTERVAL;
-        _sendLocOnce = ("sendLocOnce" in opts && opts.sendLocOnce != null) ? opts.sendLocOnce : false;
-        _locationRecording = ("sendLoc" in opts && opts.sendLoc != null) ? opts.sendLoc : _locationRecording;
-        _locationOnWakeReason = ("locationOnWakeReason" in opts && opts.locationOnWakeReason != null) ? opts.locationOnWakeReason : [];
+        _locInterval = ("locInterval" in opts && opts.locInterval != null) ? opts.locInterval : DEFAULT_LOC_INTERVAL;
+        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : false;
+        _locRecording = ("locRecording" in opts && opts.locRecording != null) ? opts.locRecording : _locRecording;
+        _locOnWakeReason = ("locOnWakeReason" in opts && opts.locOnWakeReason != null) ? opts.locOnWakeReason : [];
 
         // Convert wake reasons to an array
-        if (typeof _locationOnWakeReason != "array") {
-            _locationOnWakeReason = [_locationOnWakeReason];
+        if (typeof _locOnWakeReason != "array") {
+            _locOnWakeReason = [_locOnWakeReason];
             // Change the original so array check does not need to be done on agent
-            opts.locationOnWakeReason = _locationOnWakeReason;
+            opts.locOnWakeReason = _locOnWakeReason;
         }
 
         _locationTimeout = 0;
@@ -90,20 +90,6 @@ class Conctr {
         }
 
         setAgentOpts(opts);
-    }
-
-
-    // 
-    // returns current location opts
-    // @return {Table} recording opts
-    // 
-    function getLocationOpts() {
-        return {
-            "sendLocOnce": _sendLocOnce,
-            "sendLoc": _locationRecording,
-            "sendLocInterval": _sendLocInterval,
-            "locationOnWakeReason": _locationOnWakeReason
-        }
     }
 
 
@@ -146,7 +132,7 @@ class Conctr {
                 v._source <- SOURCE_DEVICE;
 
                 // Add the location if required
-                if (!("_location" in v) && _shouldSendLocation() && !locationAdded) {
+                if (!("_location" in v) && _shouldlocRecordingation() && !locationAdded) {
 
                     local wifis = imp.scanwifinetworks();
                     if (wifis != null && wifis.len() > 0) {
@@ -154,7 +140,7 @@ class Conctr {
                         locationAdded = true;
                         // update timeout
                         local now = (hardware.millis() / 1000);
-                        _locationTimeout = now + _sendLocInterval;
+                        _locationTimeout = now + _locInterval;
                         _locationSent = true;
                     }
                 }
@@ -186,6 +172,7 @@ class Conctr {
             throw "Conctr: Payload must contain a table or an array of tables";
         }
     }
+
 
     // 
     // Alias for sendData function, allows for conctr.send() to accept the same arguements as _sender.send()
@@ -228,10 +215,9 @@ class Conctr {
     // 
     // @return {Boolean} - Returns true if location should be sent with the data.
     // 
-    // 
-    function _shouldSendLocation() {
+    function _shouldlocRecordingation() {
 
-        if (!_locationRecording) {
+        if (!_locRecording) {
 
             // not recording location 
             return false;
@@ -241,9 +227,9 @@ class Conctr {
             // check new location scan conditions are met and search for proximal wifi networks
             local now = (hardware.millis() / 1000);
             // If there are no wakereasons set under which to send loc send loc. or if there are and a matach to specified reasons found send loc.
-            local sendLocDueToWakeReason = (_locationOnWakeReason.len() == 0 || (_locationOnWakeReason.len() > 0 && _locationOnWakeReason.find(hardware.wakereason()) != null))
+            local locRecordingDueToWakeReason = (_locOnWakeReason.len() == 0 || (_locOnWakeReason.len() > 0 && _locOnWakeReason.find(hardware.wakereason()) != null))
 
-            if (((_locationSent == false) && sendLocDueToWakeReason) || ((_sendLocOnce == false) && (_locationTimeout - now < 0) && sendLocDueToWakeReason)) {
+            if (((_locationSent == false) && locRecordingDueToWakeReason) || ((_locSendOnce == false) && (_locationTimeout - now < 0) && locRecordingDueToWakeReason)) {
 
                 return true;
 
