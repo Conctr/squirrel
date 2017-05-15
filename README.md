@@ -20,14 +20,14 @@ The constructor takes three required parameters: your application ID, API key an
 
 | Key | Data Type | Required | Default Value | Description |
 | --- | --------- | -------- | ------------- | ----------- |
-| *appId* | String | Yes | N/A | The ID used to uniquely identify the application |
-| *apiKey* | String | Yes  | N/A | The API key that will be used to authenticate requests to Conctr |
-| *model* | String | Yes  | N/A | The model created within the application that defines the data structure Conctr will expect from the device and will validate against |
-| *options.useAgentId* | Boolean | No | false | Flag used to determine whether the imp agent ID or device ID should be used as the primary identifier to Conctr for the data sent. See *setDeviceId()* to set a custom ID |
-| *options.region* | String | No | `"us-west-2"` |  Region of the instance to use |
-| *options.environment* | String | No | `"staging"` | Conctr environment to send data to |
-| *options.rocky* | Object | No | null | An instantiated [Rocky](https://electricimp.com/docs/libraries/utilities/rocky/) object. |
-| *options.messageManager* | Object | No | null | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) object. It will also accept an instantiated [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object|
+| *appId* | String | Yes | N/A | The ID used to uniquely identify the application. |
+| *apiKey* | String | Yes  | N/A | The API key that will be used to authenticate requests to Conctr. |
+| *model* | String | Yes  | N/A | The model created within the application that defines the data structure Conctr will expect from the device and will validate against. |
+| *options.useAgentId* | Boolean | No | `false` | Flag used to determine whether the imp agent ID or device ID should be used as the primary identifier to Conctr for the data sent. See *setDeviceId()* to set a custom ID. |
+| *options.region* | String | No | `"us-west-2"` |  Region of the instance to use.|
+| *options.environment* | String | No | `"staging"` | Conctr environment to send data to. |
+| *options.rocky* | Object | No | `null` | An instantiated [Rocky](https://electricimp.com/docs/libraries/utilities/rocky/) object. |
+| *options.messageManager* | Object | No | `null` | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) object. It will also accept an instantiated [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object.|
 
 #### Example
 
@@ -68,8 +68,8 @@ The *sendData()* method sends a data payload to Conctr via the data ingeston end
 
 | Key | Data Type | Required | Description |
 | --- | --------- | -------- | ----------- |
-| *payload* | Table | Yes | A table containing the data to be sent to Conctr. The keys in the table should correspond to fields from the model and the keys should be of type specified in the model |
-| *callback* | Function | No | Function to be called on response from Conctr. The function should take two arguements, *error* and *response*. When no error occurred, the first arguement will be null |
+| *payload* | Table/Array | Yes | A table or array of tables containing the data to be sent to Conctr. The keys in the table should correspond to fields from the model and the keys should be of type specified in the model. |
+| *callback* | Function | No | Function to be called on response from Conctr. The function should take two arguements, *error* and *response*. When no error occurred, the first arguement will be null. |
 
 #### Example
 
@@ -91,6 +91,13 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
 
 Instantiates the Conctr device class. It takes an optional table, *options*, to override default behaviour. *options* may contain any of the following keys:
 
+| Key | Data Type | Default Value | Description |
+| --- | --------- | ------------- | ----------- |
+| *options.locEnabled* | Boolean | `true` | When enabled, location data will be automatically included with the data payload |
+| *options.locInterval* | Integer | `3600` | Duration in seconds between location updates |
+| *options.locSendOnce* | Boolean | `false` | Setting to `true` sends the location of the device only once, when the device restarts |
+| *options.locWakeReasons* | Array/Integer | `[]` | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only. |
+| *options.messageManager* | Object |`agent` | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) object. It will also accept an instantiated [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object or an instantiated [ImpPager](https://github.com/electricimp/ReplayMessenger) object.|
  
 ### setLocationOpts(*[options]*)
 
@@ -99,10 +106,10 @@ Allows you to override the current location options. Calling the method without 
 
 | Key | Data Type | Default Value | Description |
 | --- | --------- | ------------- | ----------- |
-| *options.sendLoc* | Boolean | `true` | When enabled, location data will be automatically included with the data payload |
-| *options.sendLocInterval* | Integer | 3600 | Duration in seconds between location updates |
-| *options.sendLocOnce* | Boolean | `false` | Setting to `true` sends the location of the device only once, when the device restarts |
-| *options.locationOnWakeReason* | Array/Integer | [] | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only. |
+| *options.locEnabled* | Boolean | `true` | When enabled, location data will be automatically included with the data payload |
+| *options.locInterval* | Integer | `3600` | Duration in seconds between location updates |
+| *options.locSendOnce* | Boolean | `false` | Setting to `true` sends the location of the device only once, when the device restarts |
+| *options.locWakeReasons* | Array/Integer | `[]` | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only. |
 
 #### Example
 
@@ -111,7 +118,7 @@ Allows you to override the current location options. Calling the method without 
 
 // change options to disable location sending altogether
 local opts = { 
-    "sendLoc" : false,
+    "locEnabled" : false,
     };
 conctr.setLocationOpts(opts)
 ```
@@ -139,9 +146,14 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
 }.bindenv(this));
 ```
 
-### send(*payload[, callback]*)
+### send(*ignoredString, payload*)
+This is an alias for the sendData function above that uses the same format as agent.send("event name",payload)
 
-This is an alias for the sendData function above. 
+| Key | Data Type | Required | Description |
+| --- | --------- | -------- | ----------- |
+| *ignoredString* | String | Yes | A string that will be ignored, can be null.|
+| *payload* | Table | Yes | A table containing the data to be sent to Conctr. This keys in the table should correspond to fields from the model and the keys should be of type specified in the model |
+
 
 ## License
 

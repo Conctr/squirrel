@@ -36,13 +36,15 @@ class Conctr {
     _rocky = null;
     _sender = null;
 
-    // Location recording options
+    // Location recording parameters
     _locEnabled = true;
-    _locSent = false;
-    _locTimeout = 0;
-    _locOnWakeReason = null;
     _locInterval = 0;
     _locSendOnce = false;
+    _locWakeReasons = null;
+
+    // Location state
+    _locSent = false;
+    _locTimeout = 0;
 
     _DEBUG = false;
 
@@ -349,7 +351,7 @@ class Conctr {
         _locInterval = ("locInterval" in opts && opts.locInterval != null) ? opts.locInterval : DEFAULT_LOC_INTERVAL;
         _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : false;
         _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : _locEnabled;
-        _locOnWakeReason = ("locOnWakeReason" in opts && opts.locOnWakeReason != null) ? opts.locOnWakeReason : [];
+        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : [];
         _locSent = false;
     }
 
