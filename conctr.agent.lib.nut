@@ -30,11 +30,16 @@ class Conctr {
     _api_key = null;
     _app_id = null;
     _device_id = null;
+    _conctrHeaders = null;
     _region = null;
     _env = null;
     _model = null;
     _rocky = null;
     _sender = null;
+
+    // Pending queue status
+    _pendingReqs = null;
+    _pendingTimer = null;
 
     // Location recording parameters
     _locEnabled = true;
@@ -46,7 +51,7 @@ class Conctr {
     _locSent = false;
     _locTimeout = 0;
 
-    _DEBUG = false;
+    DEBUG = false;
 
 
     // 
@@ -72,6 +77,9 @@ class Conctr {
         _app_id = appId;
         _api_key = apiKey;
         _model = model_ref;
+        _conctrHeaders = {};
+        _conctrHeaders["Content-Type"] <- "application/json";
+        _conctrHeaders["Authorization"] <- (_api_key.find("api:") == null) ? "api:" + _api_key : _api_key;
 
         _env = ("env" in opts) ? opts.env : "staging";
         _region = ("region" in opts) ? opts.region : "us-west-2";
@@ -190,11 +198,81 @@ class Conctr {
         // Request the location
         if (getLocation) _getLocation();
 
-        // Send data to Conctr
-        local url = _formDataEndpointUrl();
-        _postToConctr(payload, url, callback);
+        // Post data straight through if nothing queued else add to queue
+        _postToIngestion(payload, callback);
     }
 
+    // 
+    // Posts a sendData payload to conctrs ingestion engine
+    // 
+    // @param {Array}       payload    The data payload
+    // @param {Function}    cb         Optional callback
+    // 
+    function _postToIngestion(payload, cb = null) {
+
+        // Store up requests if we have an active queue
+        if (_pendingReqs != null) {
+            _pendingReqs.payloads.extend(payload);
+            _pendingReqs.callbacks.push(cb);
+            return;
+        }
+
+        local url = _formDataEndpointUrl();
+        local req = http.request("POST", url, _conctrHeaders, http.jsonencode(payload));
+
+        req.sendasync(function(resp) {
+
+            if (resp.statuscode >= 200 && resp.statuscode < 300) {
+
+                // All good return
+                if (cb) {
+                    // Call all callbacks 
+                    local err = null;
+                    if (typeof cb != "array") cb = [cb];
+                    foreach (func in cb) {
+                        func(err, resp);
+                    }
+                }
+                return;
+
+            } else if (resp.statuscode == 429 || resp.statuscode < 200 || resp.statuscode >= 500) {
+
+                // Create a new pending queue or append to an existing one
+                if (_pendingReqs == null) {
+                    _pendingReqs = { "payloads": [], "callbacks": [] };
+                    if (DEBUG) server.log("Conctr: Starting to queue data in batch");
+                }
+                _pendingReqs.payloads.extend(payload);
+                _pendingReqs.callbacks.push(cb);
+
+                // Wait a second for the agent to cool off after an error
+                // Don't pass if there is another timer running
+                if (_pendingTimer != null) return;
+                _pendingTimer = imp.wakeup(1, function() {
+                    if (DEBUG) server.log("Conctr: Sending queued data in batch");
+                    // backup and release the pending queue before retrying to post it
+                    _pendingTimer = null;
+                    local pendingReqs = _pendingReqs;
+                    _pendingReqs = null;
+                    return _postToIngestion(pendingReqs.payloads, pendingReqs.callbacks);
+                }.bindenv(this))
+                return;
+
+            } else {
+
+                // Unrecoverable error or max retries, dont bother retrying let the user handle it.
+                local err = "HTTP error code: " + resp.statuscode;
+                // Call all callbacks 
+                if (typeof cb != "array") cb = [cb];
+                foreach (func in cb) {
+                    func(err, resp);
+                }
+                return;
+
+            }
+
+        }.bindenv(this))
+    }
 
 
     // 
@@ -267,40 +345,14 @@ class Conctr {
 
 
     // 
-    // Posts data payload to Conctr.
-    // @param  {Table}      payload    Data to be sent to Conctr
-    // @param  {String}     endpoint   Url to post to
-    // @param  {Function}   callback   Optional callback for result
-    // 
-    function _postToConctr(payload, endpoint, callback = null) {
-
-        local headers = {};
-        headers["Content-Type"] <- "application/json";
-        headers["Authorization"] <-(_api_key.find("api:") == null) ? "api:" + _api_key : _api_key;
-
-        // Send the payload(s) to the endpoint
-        if (_DEBUG) {
-            server.log(format("Conctr: Sending to %s", endpoint));
-            server.log(format("Conctr: %s", http.jsonencode(payload)));
-        }
-
-        _requestWithRetry("post", endpoint, headers, http.jsonencode(payload), callback);
-
-    }
-
-
-    // 
     // Sends a request to the device to send its current location (array of wifis) if conditions in current location sending opts are met. 
     // 
     function _getLocation() {
 
         if (!_locEnabled) {
 
-            if (_DEBUG) {
-                server.log("Conctr: location recording is not enabled");
-            }
-
             // not recording location 
+            if (DEBUG) server.log("Conctr: location recording is not enabled");
             return;
 
         } else {
@@ -309,9 +361,7 @@ class Conctr {
             local now = time();
             if ((_locSent == false) || ((_locSendOnce == false) && (_locTimeout - now < 0))) {
 
-                if (_DEBUG) {
-                    server.log("Conctr: requesting location from device");
-                }
+                if (DEBUG) server.log("Conctr: requesting location from device");
 
                 // Update timeout and flag
                 _locTimeout = time() + _locInterval;
@@ -343,9 +393,7 @@ class Conctr {
     // 
     function _setLocationOpts(opts = {}) {
 
-        if (_DEBUG) {
-            server.log("Conctr: setting agent opts to: " + http.jsonencode(opts));
-        }
+        if (DEBUG) server.log("Conctr: setting agent opts to: " + http.jsonencode(opts));
 
         // Set default locInterval between location updates
         _locInterval = ("locInterval" in opts && opts.locInterval != null) ? opts.locInterval : DEFAULT_LOC_INTERVAL;
@@ -398,7 +446,7 @@ class Conctr {
     // @param  {Object} rocky Instantiated instance of the Rocky class
     // 
     function _setupAgentApi(rocky) {
-        if (_DEBUG) server.log("Conctr: Set up agent endpoints");
+        if (DEBUG) server.log("Conctr: Set up agent endpoints");
         rocky.post("/conctr/claim", _handleClaimReq.bindenv(this));
     }
 
@@ -417,7 +465,7 @@ class Conctr {
             if (err != null) {
                 return context.send(400, { "error": err });
             }
-            if (_DEBUG) server.log("Conctr: Device claimed");
+            if (DEBUG) server.log("Conctr: Device claimed");
             return context.send(200, resp);
         });
 
@@ -438,8 +486,7 @@ class Conctr {
 
         local url = _formClaimEndpointUrl();
         local payload = { "consumer_jwt": consumer_jwt };
-
-        _postToConctr(payload, url, cb)
+        _requestWithRetry("post", url, _conctrHeaders, http.jsonencode(payload), cb);
     }
 
 
