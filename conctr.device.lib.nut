@@ -169,7 +169,6 @@ class Conctr {
                         }
                     }
                 }
-
             }
 
             if (DEBUG) server.log("Conctr: Sending data to agent");

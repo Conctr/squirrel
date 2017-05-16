@@ -86,7 +86,7 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
 ```
 
 ## Device Class Usage
-
+**NOTE:** The device class is optional. It provides utility functions for interfacing with the agent class like automating the location sending process and provide queueing and error handling for sending data to conctr.
 ### Constructor: Conctr(*[options]*)
 
 Instantiates the Conctr device class. It takes an optional table used to set the configuration of the class. *options* may contain any of the following keys:

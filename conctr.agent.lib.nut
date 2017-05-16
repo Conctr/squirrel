@@ -57,7 +57,7 @@ class Conctr {
     _pendingTimer = null;
 
     // Location recording parameters
-    _locEnabled = true;
+    _locEnabled = false; 
     _locInterval = 0;
     _locSendOnce = false;
     _locWakeReasons = null;
@@ -210,7 +210,7 @@ class Conctr {
             }
         }
 
-        // Request the location
+        // Requests the location from the device when criterias are met
         if (getLocation) _getLocation();
 
         // Post data straight through if nothing queued else add to queue
