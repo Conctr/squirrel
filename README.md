@@ -16,7 +16,7 @@ To use this library you will need to:
 ## Agent Class Usage
 ### Constructor: Conctr(*appId, apiKey, model[, options]*)
 
-The constructor takes three required parameters: your application ID, API key and model. These details can be found by navigating into your application on the Conctr platform, selecting on the *models* tab in the left side menu then click on the example button under the model you wish to use and chose the tab marked *Squirell*. There are also three optional parameters: the region to be used (defaults to `"us-west-2"`), the environment (defaults to `"staging"`) and the *useAgentId* (defaults to `false`) which can be passed in within a table as the options parameter.
+The constructor takes three required parameters: your application ID, API key and model. These details can be found by navigating into your application on the Conctr platform, selecting the *models* tab in the left side menu then clicking on the *example* button under the model you wish to use and chose the tab marked *Squirrel*. There are also an optional options parameter that can be used to configure the library. 
 
 | Key | Data Type | Required | Default Value | Description |
 | --- | --------- | -------- | ------------- | ----------- |
@@ -45,7 +45,7 @@ conctr <- Conctr(APP_ID, API_KEY, MODEL);
 
 ### setDeviceId(*[deviceId]*)
 
-The *setDeviceId()* allows you the set the unique identifier that will be used by Conctr to identify the current device. 
+The *setDeviceId()* method allows you the set the unique identifier that will be used by Conctr to identify the current device. 
 
 **Note** Changing the device ID after data has already been set previously will create a new device in Conctr. There will be no link between any data from this newly created device and the device data linked to the previous device ID.
 
@@ -64,7 +64,7 @@ conctr.setDeviceId(CUSTOM_DEVICE_ID);
 
 ### sendData(*payload[, callback]*)
 
-The *sendData()* method sends a data payload to Conctr via the data ingeston endpoint. It is called by the data event listener when the device sends data using the Conctr device class. It can also be used directly to send data to Conctr via the agent alone.
+The *sendData()* method sends a data payload to Conctr via the data ingeston endpoint. 
 
 | Key | Data Type | Required | Description |
 | --- | --------- | -------- | ----------- |
@@ -89,13 +89,13 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
 
 ### Constructor: Conctr(*[options]*)
 
-Instantiates the Conctr device class. It takes an optional table, *options*, to override default behaviour. *options* may contain any of the following keys:
+Instantiates the Conctr device class. It takes an optional table used to set the configuration of the class. *options* may contain any of the following keys:
 
 | Key | Data Type | Default Value | Description |
 | --- | --------- | ------------- | ----------- |
-| *options.locEnabled* | Boolean | `true` | When enabled, location data will be automatically included with the data payload |
-| *options.locInterval* | Integer | `3600` | Duration in seconds between location updates |
-| *options.locSendOnce* | Boolean | `false` | Setting to `true` sends the location of the device only once, when the device restarts |
+| *options.locEnabled* | Boolean | `true` | When enabled, location data will be automatically included with the data payload. |
+| *options.locInterval* | Integer | `3600` | Duration in seconds between location updates. |
+| *options.locSendOnce* | Boolean | `false` | Setting to `true` sends the location of the device only once. |
 | *options.locWakeReasons* | Array/Integer | `[]` | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only. |
 | *options.messageManager* | Object |`agent` | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) object. It will also accept an instantiated [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object or an instantiated [ImpPager](https://github.com/electricimp/ReplayMessenger) object.|
  
@@ -106,9 +106,9 @@ Allows you to override the current location options. Calling the method without 
 
 | Key | Data Type | Default Value | Description |
 | --- | --------- | ------------- | ----------- |
-| *options.locEnabled* | Boolean | `true` | When enabled, location data will be automatically included with the data payload |
-| *options.locInterval* | Integer | `3600` | Duration in seconds between location updates |
-| *options.locSendOnce* | Boolean | `false` | Setting to `true` sends the location of the device only once, when the device restarts |
+| *options.locEnabled* | Boolean | `true` | When enabled, location data will be automatically included with the data payload. |
+| *options.locInterval* | Integer | `3600` | Duration in seconds between location updates. |
+| *options.locSendOnce* | Boolean | `false` | Setting to `true` sends the location of the device only once, when the device boots if other criteria are met. |
 | *options.locWakeReasons* | Array/Integer | `[]` | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only. |
 
 #### Example
@@ -125,7 +125,9 @@ conctr.setLocationOpts(opts)
 
 ### sendData(*payload[, callback]*)
 
-The *sendData()* method is used to send a data payload to Conctr. This function emits the payload to as a "conctr_data" event. The agents sendData() function is called by the corresponding event listener and the payload is sent to Conctr via the data ingeston endpoint. 
+The *sendData()* method is used to send a data payload to Conctr via the agent. 
+
+**Note** To recieve a response to the http request in the callback you must have passed in a value for the `options.messageManager` optional parameter in the device constructor. If not the callback will be called as soon as the payload has been sent to the agent.
 
 | Key | Data Type | Required | Description |
 | --- | --------- | -------- | ----------- |

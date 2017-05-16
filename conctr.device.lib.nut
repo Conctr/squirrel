@@ -1,18 +1,38 @@
-// Squirrel class to interface with the Conctr platform
+// MIT License
 
 // Copyright (c) 2016-2017 Mystic Pants Pty Ltd
-// This file is licensed under the MIT License
-// http://opensource.org/licenses/MIT
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
 
 class Conctr {
 
     static VERSION = "2.0.0";
 
-    // event to emit data payload
+    // events
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ_EVENT = "conctr_get_location";
     static AGENT_OPTS_EVENT = "conctr_agent_options";
+
+    // Data source label
     static SOURCE_DEVICE = "impdevice";
+
+    // List of options the agent maintains a copy of
     static AGENT_OPTS = ["locInterval", "locSendOnce", "locEnabled", "locWakeReasons"];
 
     // 1 hour in seconds
@@ -28,7 +48,7 @@ class Conctr {
     _locSent = false;
     _locTimeout = 0;
 
-    _DEBUG = false;
+    DEBUG = false;
     _sender = null;
 
 
@@ -87,9 +107,7 @@ class Conctr {
         _locTimeout = 0;
         _locSent = false;
 
-        if (_DEBUG) {
-            server.log("Conctr: setting agent options from device");
-        }
+        if (DEBUG) server.log("Conctr: setting agent options from device");
 
         sendAgentOpts(opts);
     }
@@ -154,9 +172,7 @@ class Conctr {
 
             }
 
-            if (_DEBUG) {
-                server.log("Conctr: Sending data to agent");
-            }
+            if (DEBUG) server.log("Conctr: Sending data to agent");
 
             // Listen for a reply if using bullwinkle/message manager and theres a callback
             local handler = _sender.send(DATA_EVENT, payload);
@@ -207,10 +223,7 @@ class Conctr {
             // Handle both agent.send and messageManager.send syntax
             msg = ("data" in msg) ? msg.data : msg;
             sendData({});
-            if (_DEBUG) {
-                server.log("Conctr: received a location request from agent");
-            }
-
+            if (DEBUG) server.log("Conctr: received a location request from agent");
         }.bindenv(this));
     }
 
