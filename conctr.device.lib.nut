@@ -109,22 +109,7 @@ class Conctr {
 
         if (DEBUG) server.log("Conctr: setting agent options from device");
 
-        sendAgentOpts(opts);
-    }
-
-
-    // 
-    // @param  {Table} options - Table containing options to be sent to the agent
-    // 
-    function sendAgentOpts(opts) {
-        // Get only relevant opts
-        local agent_opts = {};
-        foreach (opt in AGENT_OPTS) {
-            if (opt in opts) {
-                agent_opts[opt] <- opts[opt];
-            }
-        }
-        _sender.send(AGENT_OPTS_EVENT, agent_opts);
+        _sendAgentOpts(opts);
     }
 
 
@@ -206,11 +191,13 @@ class Conctr {
     // 
     // Alias for sendData function, allows for conctr.send() to accept the same arguements as agent.send()
     // 
-    // @param  {String} unusedKey - An unused string
-    // @param  {Table or Array} payload - Table or Array containing data to be persisted
+    // @param  {String}         unusedKey   An unused string
+    // @param  {Table or Array} payload     Table or Array containing data to be persisted
+    // @return {Integer}                    Zero on success the same as agent.send            
     // 
-    function send(unusedKey, payload = null) {
+    function send(unusedKey, payload) {
         sendData(payload, null);
+        return 0;
     }
 
 
@@ -226,6 +213,20 @@ class Conctr {
         }.bindenv(this));
     }
 
+
+    // 
+    // @param  {Table} options - Table containing options to be sent to the agent
+    // 
+    function _sendAgentOpts(opts) {
+        // Get only relevant opts
+        local agent_opts = {};
+        foreach (opt in AGENT_OPTS) {
+            if (opt in opts) {
+                agent_opts[opt] <- opts[opt];
+            }
+        }
+        _sender.send(AGENT_OPTS_EVENT, agent_opts);
+    }
 
     // 
     // Checks current location recording options and returns true if location should be sent
