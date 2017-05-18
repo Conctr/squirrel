@@ -22,17 +22,7 @@
 
 class DeviceTestCase extends ImpTestCase {
 
-    conctr = null;
-
     function setUp() {
-        local recordingOpts = {
-            "locEnabled": true,
-            "locInterval": 3600,
-            "locSendOnce": false,
-            "locWakeReasons": [WAKEREASON_BLINKUP, WAKEREASON_PIN, WAKEREASON_NEW_SQUIRREL],
-        }
-        conctr = Conctr(recordingOpts);
-
         return "Hi from #{__FILE__}!";
     }
 

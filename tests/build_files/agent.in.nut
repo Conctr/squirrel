@@ -57,7 +57,7 @@ class Conctr {
     _pendingTimer = null;
 
     // Location recording parameters
-    _locEnabled = false; 
+    _locEnabled = false;
     _locInterval = 0;
     _locSendOnce = false;
     _locWakeReasons = null;
@@ -88,14 +88,13 @@ class Conctr {
         assert(typeof appId == "string");
         assert(typeof apiKey == "string");
         assert(typeof model_ref == "string");
-        assert(typeof opts == "table");
 
         _app_id = appId;
         _api_key = apiKey;
         _model = model_ref;
         _conctrHeaders = {};
         _conctrHeaders["Content-Type"] <- "application/json";
-        _conctrHeaders["Authorization"] <- (_api_key.find("api:") == null) ? "api:" + _api_key : _api_key;
+        _conctrHeaders["Authorization"] <-(_api_key.find("api:") == null) ? "api:" + _api_key : _api_key;
 
         _env = ("env" in opts) ? opts.env : "staging";
         _region = ("region" in opts) ? opts.region : "us-west-2";
@@ -543,3 +542,10 @@ class Conctr {
         // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s/claim", region, env, appId, deviceId);
     }
 }
+
+
+APP_ID <- "40c91df1b9f24faabfacd5bccd1c4a43";
+API_KEY <- "af566601-249b-4557-91c9-4ccd11409a81";
+MODEL <- "test_model:v1";
+
+conctr <- Conctr(APP_ID, API_KEY, MODEL);
