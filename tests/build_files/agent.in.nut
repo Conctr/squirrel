@@ -548,9 +548,9 @@ class Conctr {
 }
 
 
-APP_ID <- "40c91df1b9f24faabfacd5bccd1c4a43";
-API_KEY <- "af566601-249b-4557-91c9-4ccd11409a81";
-MODEL <- "test_model:v1";
+APP_ID <- "Enter your app id";
+API_KEY <- "Enter your api key";
+MODEL <- "Enter your model";
 
 // mmOpts <- {
 //     "retryInterval": 15,
