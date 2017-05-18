@@ -20,6 +20,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// #require "#require "messagemanager.class.nut:1.0.2"
+// #require "rocky.class.nut:2.0.0"
+
+
 class Conctr {
 
     static VERSION = "2.0.0";
@@ -548,4 +552,19 @@ APP_ID <- "40c91df1b9f24faabfacd5bccd1c4a43";
 API_KEY <- "af566601-249b-4557-91c9-4ccd11409a81";
 MODEL <- "test_model:v1";
 
-conctr <- Conctr(APP_ID, API_KEY, MODEL);
+// mmOpts <- {
+//     "retryInterval": 15,
+//     "messageTimeout": 20,
+//     "autoRetry": true,
+//     "maxAutoRetries": 10,
+// };
+
+// mm <- MessageManager(mmOpts);
+// rocky <- Rocky()
+
+conctrOpts <- {
+    // "messageManager": mm,
+    // "rocky": rocky
+}
+
+conctr <- Conctr(APP_ID, API_KEY, MODEL, conctrOpts);

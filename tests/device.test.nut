@@ -38,8 +38,14 @@ class DeviceTestCase extends ImpTestCase {
             // Send the payload
             conctr.sendData(payload, function(err, resp) {
                 if (err) reject(err);
-                // resp will be null as there is no messageManager to get a response from
-                this.assertTrue(resp == null);
+                // Check if sender has reply capability
+                if ("onReply" in conctr._sender) {
+                    // assert the data was accepted
+                    this.assertEqual(201, resp.statuscode);
+                } else {
+                    // resp will be null as there is no messageManager to get a response from
+                    this.assertTrue(resp == null);
+                }
                 resolve();
             }.bindenv(this))
         }.bindenv(this))
@@ -85,6 +91,27 @@ class DeviceTestCase extends ImpTestCase {
             }
 
             resolve();
+        }.bindenv(this))
+    }
+
+
+    function xtestMessageManagerReply() {
+        return Promise(function(resolve, reject) {
+            // Ensure this payload matches your model
+            local payload = {
+                "temperature": 15,
+                "humidity": 80,
+            }
+
+            // Send the payload
+            conctr.sendData(payload, function(err, resp) {
+                if (err) reject(err);
+                // Check if sender has reply capability
+                this.assertTrue("onReply" in conctr._sender);
+                // assert the data was accepted
+                this.assertEqual(201, resp.statuscode);
+                resolve();
+            }.bindenv(this))
         }.bindenv(this))
     }
 

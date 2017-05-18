@@ -20,6 +20,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// "#require "messagemanager.class.nut:1.0.2"
+
 class Conctr {
 
     static VERSION = "2.0.0";
@@ -256,11 +258,23 @@ class Conctr {
 }
 
 
-recordingOpts <- {
+// MessageManager options
+// mmOpts <- {
+//     "retryInterval": 15,
+//     "messageTimeout": 20,
+//     "autoRetry": true,
+//     "maxAutoRetries": 10,
+// };
+
+// mm <- MessageManager(mmOpts);
+
+// Conctr options
+conctrOpts <- {
     "locEnabled": true,
     "locInterval": 3600,
     "locSendOnce": false,
     "locWakeReasons": [WAKEREASON_BLINKUP, WAKEREASON_PIN, WAKEREASON_NEW_SQUIRREL],
+    // "messageManager": mm
 }
 
-conctr <- Conctr(recordingOpts);
+conctr <- Conctr(conctrOpts);

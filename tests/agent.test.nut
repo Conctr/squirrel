@@ -63,6 +63,20 @@ class AgentTestCase extends ImpTestCase {
         }.bindenv(this))
     }
 
+    function xtestRockyEndpoints() {
+        return Promise(function(resolve, reject) {
+            local endpoint = http.agenturl() + "/conctr/claim";
+
+            local req = http.request("POST", endpoint, {}, http.jsonencode({}));
+
+            req.sendasync(function(resp) {
+                this.assertEqual(401, resp.statuscode);
+                resolve();
+            }.bindenv(this));
+
+        }.bindenv(this))
+    }
+
     function tearDown() {
         return "Test finished";
     }
