@@ -22,15 +22,7 @@
 
 class AgentTestCase extends ImpTestCase {
 
-    conctr = null;
-
     function setUp() {
-        // Conctr credentials. Requires user input.
-        const APP_ID = "Enter your conctr application id";
-        const API_KEY = "Enter your conctr API key";
-        const MODEL = "Enter your conctr model";
-
-        conctr = Conctr(APP_ID, API_KEY, MODEL);
         return "Hi from #{__FILE__}!";
     }
 
@@ -47,7 +39,7 @@ class AgentTestCase extends ImpTestCase {
                 if (err) reject(err);
 
                 // assert the data was accepted
-                this.assertEqual(resp.statuscode, 201);
+                this.assertEqual(201, resp.statuscode);
                 resolve();
             }.bindenv(this))
 
@@ -68,6 +60,20 @@ class AgentTestCase extends ImpTestCase {
             // Check new device id was set
             this.assertEqual(conctr._device_id, newDeviceId);
             resolve();
+        }.bindenv(this))
+    }
+
+    function xtestRockyEndpoints() {
+        return Promise(function(resolve, reject) {
+            local endpoint = http.agenturl() + "/conctr/claim";
+
+            local req = http.request("POST", endpoint, {}, http.jsonencode({}));
+
+            req.sendasync(function(resp) {
+                this.assertEqual(401, resp.statuscode);
+                resolve();
+            }.bindenv(this));
+
         }.bindenv(this))
     }
 
