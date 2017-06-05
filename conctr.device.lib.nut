@@ -109,7 +109,13 @@ class Conctr {
 
         if (DEBUG) server.log("Conctr: setting agent options from device");
 
-        _sendAgentOpts(opts);
+        // Send the agent opts to set opts
+        _sendAgentOpts({
+                "locInterval":_locInterval,
+                "locSendOnce":_locSendOnce,
+                "locEnabled":_locEnabled,
+                "locWakeReasons":_locWakeReasons
+            });
     }
 
 
