@@ -41,6 +41,20 @@ class Conctr {
     static RETRY_INTERVAL_DEFAULT = 5;
     static MAX_RETRY_INTERVAL = 60;
 
+    // Default location recording opts
+    static DEFAULT_LOC_ENABLED = false;
+    static DEFAULT_LOC_INTERVAL = 3600;
+    static DEFAULT_LOC_SEND_ONCE = true;
+    static DEFAULT_WAKE_REASONS = [WAKEREASON_NEW_SQUIRREL, WAKEREASON_POWER_ON];
+
+
+    // Location recording parameters
+    _locEnabled = null;
+    _locInterval = null;
+    _locSendOnce = null;
+    _locWakeReasons = null;
+
+
     // Conctr Variables
     _api_key = null;
     _app_id = null;
@@ -56,11 +70,6 @@ class Conctr {
     _pendingReqs = null;
     _pendingTimer = null;
 
-    // Location recording parameters
-    _locEnabled = false; 
-    _locInterval = 0;
-    _locSendOnce = false;
-    _locWakeReasons = null;
 
     // Location state
     _locSent = false;
@@ -95,7 +104,7 @@ class Conctr {
         _model = model_ref;
         _conctrHeaders = {};
         _conctrHeaders["Content-Type"] <- "application/json";
-        _conctrHeaders["Authorization"] <- (_api_key.find("api:") == null) ? "api:" + _api_key : _api_key;
+        _conctrHeaders["Authorization"] <-(_api_key.find("api:") == null) ? "api:" + _api_key : _api_key;
 
         _env = ("env" in opts) ? opts.env : "staging";
         _region = ("region" in opts) ? opts.region : "us-west-2";
@@ -413,9 +422,9 @@ class Conctr {
 
         // Set default locInterval between location updates
         _locInterval = ("locInterval" in opts && opts.locInterval != null) ? opts.locInterval : DEFAULT_LOC_INTERVAL;
-        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : false;
-        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : _locEnabled;
-        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : [];
+        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : DEFAULT_LOC_SEND_ONCE;
+        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : DEFAULT_LOC_ENABLED;
+        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : DEFAULT_WAKE_REASONS;
         _locSent = false;
     }
 
