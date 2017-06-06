@@ -23,7 +23,6 @@
 // #require "#require "messagemanager.class.nut:1.0.2"
 // #require "rocky.class.nut:2.0.0"
 
-
 class Conctr {
 
     static VERSION = "2.0.0";
@@ -45,6 +44,20 @@ class Conctr {
     static RETRY_INTERVAL_DEFAULT = 5;
     static MAX_RETRY_INTERVAL = 60;
 
+    // Default location recording opts
+    static DEFAULT_LOC_ENABLED = false;
+    static DEFAULT_LOC_INTERVAL = 3600;
+    static DEFAULT_LOC_SEND_ONCE = true;
+    static DEFAULT_WAKE_REASONS = [];
+
+
+    // Location recording parameters
+    _locEnabled = null;
+    _locInterval = null;
+    _locSendOnce = null;
+    _locWakeReasons = null;
+
+
     // Conctr Variables
     _api_key = null;
     _app_id = null;
@@ -60,11 +73,6 @@ class Conctr {
     _pendingReqs = null;
     _pendingTimer = null;
 
-    // Location recording parameters
-    _locEnabled = false;
-    _locInterval = 0;
-    _locSendOnce = false;
-    _locWakeReasons = null;
 
     // Location state
     _locSent = false;
@@ -92,6 +100,7 @@ class Conctr {
         assert(typeof appId == "string");
         assert(typeof apiKey == "string");
         assert(typeof model_ref == "string");
+        assert(typeof opts == "table");
 
         _app_id = appId;
         _api_key = apiKey;
@@ -416,9 +425,9 @@ class Conctr {
 
         // Set default locInterval between location updates
         _locInterval = ("locInterval" in opts && opts.locInterval != null) ? opts.locInterval : DEFAULT_LOC_INTERVAL;
-        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : false;
-        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : _locEnabled;
-        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : [];
+        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : DEFAULT_LOC_SEND_ONCE;
+        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : DEFAULT_LOC_ENABLED;
+        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : DEFAULT_WAKE_REASONS;
         _locSent = false;
     }
 

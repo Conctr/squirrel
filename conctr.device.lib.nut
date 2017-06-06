@@ -152,7 +152,7 @@ class Conctr {
 
                     // Add the location if required
                     if (_shouldRecordLocation()) {
-
+                        if(DEBUG) server.log("Conctr: Conditions met. Sending location.")
                         local wifis = imp.scanwifinetworks();
                         if (wifis != null && wifis.len() > 0) {
                             // Add the location to the data

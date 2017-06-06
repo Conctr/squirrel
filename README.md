@@ -16,15 +16,15 @@ To use this library you will need to:
 ## Agent Class Usage
 ### Constructor: Conctr(*appId, apiKey, model[, options]*)
 
-The constructor takes three required parameters: your application ID, API key and model. These details can be found by navigating into your application on the Conctr platform, selecting the *models* tab in the left side menu then clicking on the *example* button under the model you wish to use and chose the tab marked *Squirrel*. There are also an optional options parameter that can be used to configure the library. 
+The constructor takes three required parameters: *appId, apiKey* and *model*. These details can be found by navigating into your application on the Conctr platform, selecting the *models* tab in the left side menu then clicking on the *example* button under the model you wish to use and chose the tab marked *Squirrel*. There are also some configuration options parameters that can be set. 
 
 | Key | Data Type | Required | Default Value | Description |
 | --- | --------- | -------- | ------------- | ----------- |
 | *appId* | String | Yes | N/A | The ID used to uniquely identify the application. |
 | *apiKey* | String | Yes  | N/A | The API key that will be used to authenticate requests to Conctr. |
 | *model* | String | Yes  | N/A | The model created within the application that defines the data structure Conctr will expect from the device and will validate against. |
-| *options.useAgentId* | Boolean | No | `false` | Flag used to determine whether the imp agent ID or device ID should be used as the primary identifier to Conctr for the data sent. See *setDeviceId()* to set a custom ID. |
-| *options.region* | String | No | `"us-west-2"` |  Region of the instance to use.|
+| *options.useAgentId* | Boolean | No | `false` | Boolean flag used to determine whether to use the imp agent ID instead of the device ID as the primary identifier to Conctr for the data sent. See *setDeviceId()* to set a custom ID. |
+| *options.region* | String | No | `"us-west-2"` |  Region of the instance to use. Currently only `"us-west-2"` is supported.|
 | *options.environment* | String | No | `"staging"` | Conctr environment to send data to. |
 | *options.rocky* | Object | No | `null` | An instantiated [Rocky](https://electricimp.com/docs/libraries/utilities/rocky/) object. |
 | *options.messageManager* | Object | No | `null` | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) object. It will also accept an instantiated [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object.|
@@ -95,8 +95,8 @@ Instantiates the Conctr device class. It takes an optional table used to set the
 | --- | --------- | ------------- | ----------- |
 | *options.locEnabled* | Boolean | `true` | When enabled, location data will be automatically included with the data payload. |
 | *options.locInterval* | Integer | `3600` | Duration in seconds between location updates. |
-| *options.locSendOnce* | Boolean | `false` | Setting to `true` sends the location of the device only once. |
-| *options.locWakeReasons* | Array/Integer | `[]` | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only. |
+| *options.locSendOnce* | Boolean | `true` | Setting to `true` sends the location of the device only once. |
+| *options.locWakeReasons* | Array/Integer | `[WAKEREASON_NEW_SQUIRREL, WAKEREASON_POWER_ON]` | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only. |
 | *options.messageManager* | Object |`agent` | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) object. It will also accept an instantiated [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object or an instantiated [ImpPager](https://github.com/electricimp/ReplayMessenger) object.|
  
 ### setLocationOpts(*[options]*)
@@ -109,7 +109,7 @@ Allows you to override the current location options. Calling the method without 
 | *options.locEnabled* | Boolean | `true` | When enabled, location data will be automatically included with the data payload. |
 | *options.locInterval* | Integer | `3600` | Duration in seconds between location updates. |
 | *options.locSendOnce* | Boolean | `false` | Setting to `true` sends the location of the device only once, when the device boots if other criteria are met. |
-| *options.locWakeReasons* | Array/Integer | `[]` | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only. |
+| *options.locWakeReasons* | Array/Integer | `[WAKEREASON_NEW_SQUIRREL, WAKEREASON_POWER_ON]` | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only. |
 
 #### Example
 

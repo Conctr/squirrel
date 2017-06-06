@@ -45,7 +45,7 @@ class Conctr {
     static DEFAULT_LOC_ENABLED = false;
     static DEFAULT_LOC_INTERVAL = 3600;
     static DEFAULT_LOC_SEND_ONCE = true;
-    static DEFAULT_WAKE_REASONS = [WAKEREASON_NEW_SQUIRREL, WAKEREASON_POWER_ON];
+    static DEFAULT_WAKE_REASONS = [];
 
 
     // Location recording parameters
