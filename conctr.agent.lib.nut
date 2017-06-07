@@ -41,6 +41,20 @@ class Conctr {
     static RETRY_INTERVAL_DEFAULT = 5;
     static MAX_RETRY_INTERVAL = 60;
 
+    // Default location recording opts
+    static DEFAULT_LOC_ENABLED = false;
+    static DEFAULT_LOC_INTERVAL = 3600;
+    static DEFAULT_LOC_SEND_ONCE = true;
+    static DEFAULT_WAKE_REASONS = [];
+
+
+    // Location recording parameters
+    _locEnabled = null;     // Boolean to enable/disable location sending
+    _locInterval = null;    // Integer time interval between location updates
+    _locSendOnce = null;    // Boolean to send location only once
+    _locWakeReasons = null; // Array of hardware.wakereasons()
+
+
     // Conctr Variables
     _api_key = null;
     _app_id = null;
@@ -56,11 +70,6 @@ class Conctr {
     _pendingReqs = null;
     _pendingTimer = null;
 
-    // Location recording parameters
-    _locEnabled = false; 
-    _locInterval = 0;
-    _locSendOnce = false;
-    _locWakeReasons = null;
 
     // Location state
     _locSent = false;
@@ -70,7 +79,7 @@ class Conctr {
 
 
     // 
-    // constructor 
+    // Constructor 
     // 
     // @param  {String}  appId       Conctr application identifier
     // @param  {String}  apiKey      Application specific api key from Conctr
@@ -95,7 +104,7 @@ class Conctr {
         _model = model_ref;
         _conctrHeaders = {};
         _conctrHeaders["Content-Type"] <- "application/json";
-        _conctrHeaders["Authorization"] <- (_api_key.find("api:") == null) ? "api:" + _api_key : _api_key;
+        _conctrHeaders["Authorization"] <-(_api_key.find("api:") == null) ? "api:" + _api_key : _api_key;
 
         _env = ("env" in opts) ? opts.env : "staging";
         _region = ("region" in opts) ? opts.region : "us-west-2";
@@ -130,10 +139,9 @@ class Conctr {
     // 
     // Sends data for persistance to Conctr
     // 
-    // @param  {Table or Array} payload - Table or Array containing data to be persisted
+    // @param  {Table or Array}          payload  - Table or Array containing data to be persisted
     // @param  {Function (err,response)} callback - Callback function on http resp from Conctr
     // @return {Null}
-    // @throws {Exception} -
     // 
     function sendData(payload, callback = null) {
 
@@ -217,6 +225,7 @@ class Conctr {
         // Post data straight through if nothing queued else add to queue
         _postToIngestion(payload, callback);
     }
+
 
     // 
     // Posts a sendData payload to conctrs ingestion engine
@@ -413,9 +422,9 @@ class Conctr {
 
         // Set default locInterval between location updates
         _locInterval = ("locInterval" in opts && opts.locInterval != null) ? opts.locInterval : DEFAULT_LOC_INTERVAL;
-        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : false;
-        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : _locEnabled;
-        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : [];
+        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : DEFAULT_LOC_SEND_ONCE;
+        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : DEFAULT_LOC_ENABLED;
+        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : DEFAULT_WAKE_REASONS;
         _locSent = false;
     }
 
@@ -459,6 +468,7 @@ class Conctr {
 
     // 
     // Sets up endpoints for this agent
+    // 
     // @param  {Object} rocky Instantiated instance of the Rocky class
     // 
     function _setupAgentApi(rocky) {
@@ -469,6 +479,7 @@ class Conctr {
 
     // 
     // Handles device claim response from Conctr
+    // 
     // @param  {Object} context Rocky context
     // 
     function _handleClaimReq(context) {

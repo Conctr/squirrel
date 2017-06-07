@@ -24,7 +24,7 @@ class Conctr {
 
     static VERSION = "2.0.0";
 
-    // events
+    // Events
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ_EVENT = "conctr_get_location";
     static AGENT_OPTS_EVENT = "conctr_agent_options";
@@ -35,21 +35,27 @@ class Conctr {
     // List of options the agent maintains a copy of
     static AGENT_OPTS = ["locInterval", "locSendOnce", "locEnabled", "locWakeReasons"];
 
-    // 1 hour in seconds
+    // Default location recording opts
+    static DEFAULT_LOC_ENABLED = true;
     static DEFAULT_LOC_INTERVAL = 3600;
+    static DEFAULT_LOC_SEND_ONCE = true;
+    static DEFAULT_WAKE_REASONS = [WAKEREASON_NEW_SQUIRREL, WAKEREASON_POWER_ON];
+
 
     // Location recording parameters
-    _locEnabled = true;
-    _locInterval = 0;
-    _locSendOnce = false;
-    _locWakeReasons = null;
+    _locEnabled = null; // Boolean to enable/disable location sending
+    _locInterval = null; // Integer time interval between location updates
+    _locSendOnce = null; // Boolean to send location only once
+    _locWakeReasons = null; // Array of hardware.wakereasons() 
 
     // Location state
     _locSent = false;
     _locTimeout = 0;
+    
+    // Source of the data
+    _sender = null;
 
     DEBUG = false;
-    _sender = null;
 
 
     // 
@@ -93,9 +99,9 @@ class Conctr {
     function setLocationOpts(opts = {}) {
 
         _locInterval = ("locInterval" in opts && opts.locInterval != null) ? opts.locInterval : DEFAULT_LOC_INTERVAL;
-        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : false;
-        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : _locEnabled;
-        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : [];
+        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : DEFAULT_LOC_SEND_ONCE;
+        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : DEFAULT_LOC_ENABLED;
+        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : DEFAULT_WAKE_REASONS;
 
         // Convert wake reasons to an array
         if (typeof _locWakeReasons != "array") {
@@ -109,10 +115,18 @@ class Conctr {
 
         if (DEBUG) server.log("Conctr: setting agent options from device");
 
-        _sendAgentOpts(opts);
+        // Send the agent opts to set opts
+        _sendAgentOpts({
+            "locInterval": _locInterval,
+            "locSendOnce": _locSendOnce,
+            "locEnabled": _locEnabled,
+            "locWakeReasons": _locWakeReasons
+        });
     }
 
 
+    // 
+    // Sends data to conctr
     // 
     // @param  {Table or Array} payload - Table or Array containing data to be persisted
     // @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
@@ -142,7 +156,7 @@ class Conctr {
 
                     // Add the location if required
                     if (_shouldRecordLocation()) {
-
+                        if (DEBUG) server.log("Conctr: Conditions met. Sending location.")
                         local wifis = imp.scanwifinetworks();
                         if (wifis != null && wifis.len() > 0) {
                             // Add the location to the data
@@ -214,6 +228,8 @@ class Conctr {
     }
 
 
+    // 
+    // Sends set currently set location opts to the agent
     // 
     // @param  {Table} options - Table containing options to be sent to the agent
     // 

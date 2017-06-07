@@ -37,13 +37,17 @@ class Conctr {
     // List of options the agent maintains a copy of
     static AGENT_OPTS = ["locInterval", "locSendOnce", "locEnabled", "locWakeReasons"];
 
-    // 1 hour in seconds
+    // Default location recording opts
+    static DEFAULT_LOC_ENABLED = true;
     static DEFAULT_LOC_INTERVAL = 3600;
+    static DEFAULT_LOC_SEND_ONCE = true;
+    static DEFAULT_WAKE_REASONS = [WAKEREASON_NEW_SQUIRREL, WAKEREASON_POWER_ON];
+
 
     // Location recording parameters
-    _locEnabled = true;
-    _locInterval = 0;
-    _locSendOnce = false;
+    _locEnabled = null;
+    _locInterval = null;
+    _locSendOnce = null;
     _locWakeReasons = null;
 
     // Location state
@@ -95,9 +99,9 @@ class Conctr {
     function setLocationOpts(opts = {}) {
 
         _locInterval = ("locInterval" in opts && opts.locInterval != null) ? opts.locInterval : DEFAULT_LOC_INTERVAL;
-        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : false;
-        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : _locEnabled;
-        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : [];
+        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : DEFAULT_LOC_SEND_ONCE;
+        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : DEFAULT_LOC_ENABLED;
+        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : DEFAULT_WAKE_REASONS;
 
         // Convert wake reasons to an array
         if (typeof _locWakeReasons != "array") {
@@ -111,7 +115,13 @@ class Conctr {
 
         if (DEBUG) server.log("Conctr: setting agent options from device");
 
-        _sendAgentOpts(opts);
+        // Send the agent opts to set opts
+        _sendAgentOpts({
+            "locInterval": _locInterval,
+            "locSendOnce": _locSendOnce,
+            "locEnabled": _locEnabled,
+            "locWakeReasons": _locWakeReasons
+        });
     }
 
 
@@ -144,7 +154,7 @@ class Conctr {
 
                     // Add the location if required
                     if (_shouldRecordLocation()) {
-
+                        if(DEBUG) server.log("Conctr: Conditions met. Sending location.")
                         local wifis = imp.scanwifinetworks();
                         if (wifis != null && wifis.len() > 0) {
                             // Add the location to the data
@@ -256,6 +266,7 @@ class Conctr {
 
     }
 }
+
 
 
 // MessageManager options
