@@ -20,6 +20,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+const CONCTR_TEST_HTTP_CREATED = 201;
+const CONCTR_TEST_HTTP_UNAUTHORIZED = 401;
+
 class DeviceTestCase extends ImpTestCase {
 
     function setUp() {
@@ -27,6 +30,8 @@ class DeviceTestCase extends ImpTestCase {
     }
 
 
+
+    // tests the send Data function, checks that a 201 response was received
     function testSendData() {
         return Promise(function(resolve, reject) {
             // Ensure this payload matches your model
@@ -39,18 +44,26 @@ class DeviceTestCase extends ImpTestCase {
             conctr.sendData(payload, function(err, resp) {
                 if (err) reject(err);
                 // Check if sender has reply capability
-                if ("onReply" in conctr._sender) {
-                    // assert the data was accepted
-                    this.assertEqual(201, resp.statuscode);
-                } else {
-                    // resp will be null as there is no messageManager to get a response from
-                    this.assertTrue(resp == null);
+                try {
+                    if ("onReply" in conctr._sender) {
+                        // assert the data was accepted
+                        this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
+                    } else {
+                        // resp will be null as there is no messageManager to get a response from
+                        this.assertTrue(resp == null);
+                    }
+                    resolve();
+                } catch(error) {
+                    reject(error);
                 }
-                resolve();
+
             }.bindenv(this))
         }.bindenv(this))
     }
 
+
+
+    // tests the send function checks that the response is equal to 0
     function testSend() {
         return Promise(function(resolve, reject) {
             // Ensure this payload matches your model
@@ -61,12 +74,19 @@ class DeviceTestCase extends ImpTestCase {
 
             // Send the payload
             local resp = conctr.send(null, payload);
+            try {
+                this.assertEqual(resp, 0);
+                resolve();
+            } catch(error) {
+                reject(error);
+            }
 
-            this.assertEqual(resp, 0);
-            resolve();
         }.bindenv(this))
     }
 
+
+
+    // tests sending locations options
     function testSetLocationSendingOpts() {
         return Promise(function(resolve, reject) {
 
@@ -77,24 +97,32 @@ class DeviceTestCase extends ImpTestCase {
                 "locWakeReasons": [],
             }
 
-            // Ensure the opts are different
-            foreach (k, v in newOpts) {
-                this.assertTrue(conctr["_" + k] != v);
+            try {
+                // Ensure the opts are different
+                foreach (k, v in newOpts) {
+                    this.assertTrue(conctr["_" + k] != v);
+                }
+
+                // Change the options
+                conctr.setLocationOpts(newOpts);
+
+                // Ensure the opts are now all set to new vals
+                foreach (k, v in newOpts) {
+                    this.assertDeepEqual(conctr["_" + k], v);
+                }
+                resolve();
+            } catch(error) {
+                reject(error);
             }
 
-            // Change the options
-            conctr.setLocationOpts(newOpts);
 
-            // Ensure the opts are now all set to new vals
-            foreach (k, v in newOpts) {
-                this.assertDeepEqual(conctr["_" + k], v);
-            }
-
-            resolve();
         }.bindenv(this))
     }
 
 
+
+    // tests the message messageManager reply
+    // currently this tests is not set to run
     function xtestMessageManagerReply() {
         return Promise(function(resolve, reject) {
             // Ensure this payload matches your model
@@ -106,11 +134,17 @@ class DeviceTestCase extends ImpTestCase {
             // Send the payload
             conctr.sendData(payload, function(err, resp) {
                 if (err) reject(err);
-                // Check if sender has reply capability
-                this.assertTrue("onReply" in conctr._sender);
-                // assert the data was accepted
-                this.assertEqual(201, resp.statuscode);
-                resolve();
+
+                try {
+                    // Check if sender has reply capability
+                    this.assertTrue("onReply" in conctr._sender);
+                    // assert the data was accepted
+                    this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
+                    resolve();
+                } catch(error) {
+                    reject(error);
+                }
+
             }.bindenv(this))
         }.bindenv(this))
     }

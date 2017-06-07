@@ -31,6 +31,10 @@ bullOpts <- {
     "autoRetry": true // Automatically retry 10 times
 }
 
+// Initialise bullwinkle
+
+bull <- Bullwinkle(bullOpts);
+
 // Configure Conctr
 conctrOpts <- {
     "locEnabled": true,
@@ -40,8 +44,8 @@ conctrOpts <- {
     "messageManager": bull
 }
 
-// Initialize Libs
-bull <- Bullwinkle(bullOpts);
+// Initialise conctr
+
 conctr <- Conctr(conctrOpts);
 
 // Example payload. This must contain fields relating to your conctr model.

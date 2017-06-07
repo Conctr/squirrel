@@ -35,7 +35,7 @@ conctrOpts <- {
 conctr <- Conctr(APP_ID, API_KEY, MODEL, conctrOpts);
 
 
-// Example payload. This must contain fields relating to your conctr model.
+// Example payload. This must contain fields in to your conctr model.
 payload <- {
     temperature: 32,
     humidity: 10
