@@ -24,7 +24,7 @@ class Conctr {
 
     static VERSION = "2.0.0";
 
-    // events
+    // Events
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ_EVENT = "conctr_get_location";
     static AGENT_OPTS_EVENT = "conctr_agent_options";
@@ -43,17 +43,19 @@ class Conctr {
 
 
     // Location recording parameters
-    _locEnabled = null;
-    _locInterval = null;
-    _locSendOnce = null;
-    _locWakeReasons = null;
+    _locEnabled = null; // Boolean to enable/disable location sending
+    _locInterval = null; // Integer time interval between location updates
+    _locSendOnce = null; // Boolean to send location only once
+    _locWakeReasons = null; // Array of hardware.wakereasons() 
 
     // Location state
     _locSent = false;
     _locTimeout = 0;
+    
+    // Source of the data
+    _sender = null;
 
     DEBUG = false;
-    _sender = null;
 
 
     // 
@@ -124,6 +126,8 @@ class Conctr {
 
 
     // 
+    // Sends data to conctr
+    // 
     // @param  {Table or Array} payload - Table or Array containing data to be persisted
     // @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
     // 
@@ -152,7 +156,7 @@ class Conctr {
 
                     // Add the location if required
                     if (_shouldRecordLocation()) {
-                        if(DEBUG) server.log("Conctr: Conditions met. Sending location.")
+                        if (DEBUG) server.log("Conctr: Conditions met. Sending location.")
                         local wifis = imp.scanwifinetworks();
                         if (wifis != null && wifis.len() > 0) {
                             // Add the location to the data
@@ -224,6 +228,8 @@ class Conctr {
     }
 
 
+    // 
+    // Sends set currently set location opts to the agent
     // 
     // @param  {Table} options - Table containing options to be sent to the agent
     // 

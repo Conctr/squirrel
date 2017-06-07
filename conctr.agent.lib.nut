@@ -49,10 +49,10 @@ class Conctr {
 
 
     // Location recording parameters
-    _locEnabled = null;
-    _locInterval = null;
-    _locSendOnce = null;
-    _locWakeReasons = null;
+    _locEnabled = null;     // Boolean to enable/disable location sending
+    _locInterval = null;    // Integer time interval between location updates
+    _locSendOnce = null;    // Boolean to send location only once
+    _locWakeReasons = null; // Array of hardware.wakereasons()
 
 
     // Conctr Variables
@@ -79,7 +79,7 @@ class Conctr {
 
 
     // 
-    // constructor 
+    // Constructor 
     // 
     // @param  {String}  appId       Conctr application identifier
     // @param  {String}  apiKey      Application specific api key from Conctr
@@ -139,10 +139,9 @@ class Conctr {
     // 
     // Sends data for persistance to Conctr
     // 
-    // @param  {Table or Array} payload - Table or Array containing data to be persisted
+    // @param  {Table or Array}          payload  - Table or Array containing data to be persisted
     // @param  {Function (err,response)} callback - Callback function on http resp from Conctr
     // @return {Null}
-    // @throws {Exception} -
     // 
     function sendData(payload, callback = null) {
 
@@ -226,6 +225,7 @@ class Conctr {
         // Post data straight through if nothing queued else add to queue
         _postToIngestion(payload, callback);
     }
+
 
     // 
     // Posts a sendData payload to conctrs ingestion engine
@@ -468,6 +468,7 @@ class Conctr {
 
     // 
     // Sets up endpoints for this agent
+    // 
     // @param  {Object} rocky Instantiated instance of the Rocky class
     // 
     function _setupAgentApi(rocky) {
@@ -478,6 +479,7 @@ class Conctr {
 
     // 
     // Handles device claim response from Conctr
+    // 
     // @param  {Object} context Rocky context
     // 
     function _handleClaimReq(context) {
