@@ -1,10 +1,10 @@
 # Test Instructions
 
-The instructions will show you how to set up the tests for the Conctr.
+The instructions will show you how to set up Conctr so that the tests can be run.
 
 ## Setting up a Conctr model
 1. Go to [Conctr](https://staging.conctr.com/signin) if you have an account login otherwise sign up
-1. You should be at Dashboard if not please navigate to the Dashboard and click "Create Application"
+1. Navigate to the Dashboard and click "Create Application"
 1. Enter "Test" in the Application Name box then press the "Create" button
 1. You will be returned to the Dashboard. Click on the "Test" application
 1. Click on the "Models" tab
@@ -12,7 +12,7 @@ The instructions will show you how to set up the tests for the Conctr.
 1. In the model Name box write "testModel"
 1. In the "Add Standard Field" dropdown box select temperature
 1. Click "Create Model"
-1. You should be at View Models tab if not please navigate to the View Models Tabs
+1. Navigate to the View Models Tabs
 1. Click "Example" next your "testModel" model
 1. In the Payload Example Click the "Squirrel" tab
 1. In the agent section note you APP_ID, API_KEY and MODEL   
