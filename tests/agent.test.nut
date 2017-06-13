@@ -20,12 +20,21 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// http status codes
+const CONCTR_TEST_HTTP_CREATED = 201;
+const CONCTR_TEST_HTTP_UNAUTHORIZED = 401;
+const CONCTR_TEST_HTTP_BAD_REQUEST = 400;
+
+
 class AgentTestCase extends ImpTestCase {
 
     function setUp() {
         return "Hi from #{__FILE__}!";
     }
 
+
+
+    // test the sendData function sent correctly checks for a http created response
     function testSendData() {
         return Promise(function(resolve, reject) {
             // Ensure this payload matches your model
@@ -39,39 +48,90 @@ class AgentTestCase extends ImpTestCase {
                 if (err) reject(err);
 
                 // assert the data was accepted
-                this.assertEqual(201, resp.statuscode);
-                resolve();
+                try {
+                    this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
+                    resolve();
+                } catch(error) {
+                    reject(error);
+                }
+
             }.bindenv(this))
 
         }.bindenv(this))
     }
 
+
+
+    // test the sendData function where the payload contains fields not in
+    // the conctr model
+    // checks for a http bad request response
+    function testSendInvalidPayload() {
+        return Promise(function(resolve, reject) {
+            // Ensure this payload matches your model
+            local payload = {
+                "FIELD_NOT_IN_MODEL": 15,
+            }
+            // Send the payload
+            conctr.sendData(payload, function(err, resp) {
+                // assert the data was not accepted
+                try {
+                    this.assertEqual(CONCTR_TEST_HTTP_BAD_REQUEST, resp.statuscode);
+                    resolve();
+                } catch(error) {
+                    reject(error);
+                }
+
+            }.bindenv(this))
+        }.bindenv(this))
+    }
+
+
+
+    // tests the setting the device's id, checks that value changed successfully
     function testSetDeviceId() {
+
         return Promise(function(resolve, reject) {
 
             local newDeviceId = "testDevice";
 
-            // Ensure that the device ids do not already match
-            this.assertTrue(conctr._device_id != newDeviceId);
+            try {
+                // Ensure that the device ids do not already match
+                this.assertTrue(conctr._device_id != newDeviceId);
 
-            // Change the device id
-            conctr.setDeviceId("testDevice");
+                // Change the device id
+                conctr.setDeviceId("testDevice");
 
-            // Check new device id was set
-            this.assertEqual(conctr._device_id, newDeviceId);
-            resolve();
+                // Check new device id was set
+                this.assertEqual(conctr._device_id, newDeviceId);
+                resolve();
+            } catch(error) {
+                reject(error);
+            }
+
         }.bindenv(this))
     }
 
+
+
+    // tests the rocky endpoints
+    // currently not set to run
     function xtestRockyEndpoints() {
+
         return Promise(function(resolve, reject) {
+
             local endpoint = http.agenturl() + "/conctr/claim";
 
             local req = http.request("POST", endpoint, {}, http.jsonencode({}));
 
             req.sendasync(function(resp) {
-                this.assertEqual(401, resp.statuscode);
-                resolve();
+
+                try {
+                    this.assertEqual(CONCTR_TEST_HTTP_UNAUTHORIZED, resp.statuscode);
+                    resolve();
+                } catch(error) {
+                    reject(error);
+                }
+
             }.bindenv(this));
 
         }.bindenv(this))

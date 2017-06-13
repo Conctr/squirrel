@@ -46,32 +46,32 @@ class Conctr {
     _locEnabled = null; // Boolean to enable/disable location sending
     _locInterval = null; // Integer time interval between location updates
     _locSendOnce = null; // Boolean to send location only once
-    _locWakeReasons = null; // Array of hardware.wakereasons() 
+    _locWakeReasons = null; // Array of hardware.wakereasons()
 
     // Location state
-    _locSent = false;
-    _locTimeout = 0;
-    
+    _locSent = false;   // location sent
+    _locTimeout = 0;    // location data time out
+
     // Source of the data
     _sender = null;
 
     DEBUG = false;
 
 
-    // 
+    //
     // Constructor for Conctr
-    // 
-    // @param opts - location recording options 
+    //
+    // @param opts - location recording options
     // {
     //   {Boolean}  locEnabled        Should location be sent with data
     //   {Integer}  locInterval         Duration in seconds between location updates
-    //   {Boolean}  locSendOnce         Setting to true sends the location of the device only once when the device restarts 
+    //   {Boolean}  locSendOnce         Setting to true sends the location of the device only once when the device restarts
     //   {Object}   sender optional     MessageManager object
     //  }
-    // 
-    // NOTE: locEnabled takes precedence over locSendOnce. Meaning if locEnabled is set to false location will never be sent 
+    //
+    // NOTE: locEnabled takes precedence over locSendOnce. Meaning if locEnabled is set to false location will never be sent
     //       with the data until this flag is changed.
-    // 
+    //
     constructor(opts = {}) {
         _locWakeReasons = [];
         // Grab any constructor options
@@ -83,19 +83,19 @@ class Conctr {
     }
 
 
-    // 
-    // Funtion to set location recording options
-    // 
-    // @param opts {Table} - location recording options 
+    //
+    // Function to set location recording options
+    //
+    // @param opts {Table} - location recording options
     // {
     //   {Boolean}  locEnabled - Should location be sent with data
     //   {Integer}  locInterval - Duration in milliseconds since last location update to wait before sending a new location
-    //   {Boolean}  locSendOnce - Setting to true sends the location of the device only once when the device restarts 
+    //   {Boolean}  locSendOnce - Setting to true sends the location of the device only once when the device restarts
     //  }
-    // 
-    // NOTE: locEnabled takes precedence over locSendOnce. Meaning if locEnabled is set to false location will never be sent 
+    //
+    // NOTE: locEnabled takes precedence over locSendOnce. Meaning if locEnabled is set to false location will never be sent
     //       with the data until this flag is changed.
-    //       
+    //
     function setLocationOpts(opts = {}) {
 
         _locInterval = ("locInterval" in opts && opts.locInterval != null) ? opts.locInterval : DEFAULT_LOC_INTERVAL;
@@ -125,12 +125,12 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Sends data to conctr
-    // 
+    //
     // @param  {Table or Array} payload - Table or Array containing data to be persisted
     // @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
-    // 
+    //
     function sendData(payload, callback = null) {
 
         // If it's a table, make it an array
@@ -202,22 +202,22 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Alias for sendData function, allows for conctr.send() to accept the same arguements as agent.send()
-    // 
+    //
     // @param  {String}         unusedKey   An unused string
     // @param  {Table or Array} payload     Table or Array containing data to be persisted
-    // @return {Integer}                    Zero on success the same as agent.send            
-    // 
+    // @return {Integer}                    Zero on success the same as agent.send
+    //
     function send(unusedKey, payload) {
         sendData(payload, null);
         return 0;
     }
 
 
-    // 
+    //
     // Sets up event listeners
-    // 
+    //
     function _setupListeners() {
         _sender.on(LOCATION_REQ_EVENT, function(msg, reply = null) {
             // Handle both agent.send and messageManager.send syntax
@@ -228,11 +228,11 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Sends set currently set location opts to the agent
-    // 
+    //
     // @param  {Table} options - Table containing options to be sent to the agent
-    // 
+    //
     function _sendAgentOpts(opts) {
         // Get only relevant opts
         local agent_opts = {};
@@ -244,14 +244,14 @@ class Conctr {
         _sender.send(AGENT_OPTS_EVENT, agent_opts);
     }
 
-    // 
+    //
     // Checks current location recording options and returns true if location should be sent
-    // 
+    //
     // @return {Boolean} - Returns true if location should be sent with the data.
-    // 
+    //
     function _shouldRecordLocation() {
 
-        // not recording location 
+        // not recording location
         if (!_locEnabled) return false;
 
         // Send the location when there are no wake reasons set or when there is a match in the provided array of wake reasons.

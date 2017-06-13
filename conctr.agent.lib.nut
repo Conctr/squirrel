@@ -30,7 +30,7 @@ class Conctr {
     static SOURCE_DEVICE = "impdevice";
     static SOURCE_AGENT = "impagent";
     static MIN_TIME = 946684801; // Epoch timestamp for 00:01 AM 01/01/2000 (used for timestamp sanity check)
-    static DEFAULT_LOC_INTERVAL = 3600; // One hour in seconds   
+    static DEFAULT_LOC_INTERVAL = 3600; // One hour in seconds
     static MIN_RECONNECT_TIME = 5;
 
 
@@ -56,31 +56,31 @@ class Conctr {
 
 
     // Conctr Variables
-    _api_key = null;
-    _app_id = null;
-    _device_id = null;
-    _conctrHeaders = null;
-    _region = null;
-    _env = null;
-    _model = null;
-    _rocky = null;
-    _sender = null;
+    _api_key = null;        // application programming interface key
+    _app_id = null;         // application id
+    _device_id = null;      // id of the device
+    _conctrHeaders = null;  // headers
+    _region = null;         // aws region
+    _env = null;            // environment staging or dev
+    _model = null;          // conctr model
+    _rocky = null;          // rocky library object
+    _sender = null;         // messaging object
 
     // Pending queue status
-    _pendingReqs = null;
-    _pendingTimer = null;
+    _pendingReqs = null;    // pending a request 
+    _pendingTimer = null;   // timer for pending a request
 
 
     // Location state
-    _locSent = false;
-    _locTimeout = 0;
+    _locSent = false;       // location sent
+    _locTimeout = 0;        // timeout for location data
 
     DEBUG = false;
 
 
-    // 
-    // Constructor 
-    // 
+    //
+    // Constructor
+    //
     // @param  {String}  appId       Conctr application identifier
     // @param  {String}  apiKey      Application specific api key from Conctr
     // @param  {String}  model_ref   Model reference used to validate data payloads by Conctr, including the version number
@@ -92,7 +92,7 @@ class Conctr {
     //   {Object}  rocky            Model reference used to validate data payloads by Conctr, including the version number
     //   {Object}  messageManager   MessageManager object
     // }
-    // 
+    //
     constructor(appId, apiKey, model_ref, opts = {}) {
         assert(typeof appId == "string");
         assert(typeof apiKey == "string");
@@ -125,24 +125,24 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Set device unique identifier
-    // 
+    //
     // @param {String} deviceId - Unique identifier for associated device. (Defaults to imp device id)
-    // 
+    //
     function setDeviceId(deviceId = null) {
         _device_id = (deviceId == null) ? imp.configparams.deviceid : deviceId;
         return this;
     }
 
 
-    // 
+    //
     // Sends data for persistance to Conctr
-    // 
+    //
     // @param  {Table or Array}          payload  - Table or Array containing data to be persisted
     // @param  {Function (err,response)} callback - Callback function on http resp from Conctr
     // @return {Null}
-    // 
+    //
     function sendData(payload, callback = null) {
 
         // If it's a table, make it an array
@@ -227,12 +227,12 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Posts a sendData payload to conctrs ingestion engine
-    // 
+    //
     // @param {Array}       payload    The data payload
     // @param {Function}    cb         Optional callback
-    // 
+    //
     function _postToIngestion(payload, cb = null) {
 
         // Store up requests if we have an active queue
@@ -251,7 +251,7 @@ class Conctr {
 
                 // All good return
                 if (cb) {
-                    // Call all callbacks 
+                    // Call all callbacks
                     local err = null;
                     if (typeof cb != "array") cb = [cb];
                     foreach (func in cb) {
@@ -287,7 +287,7 @@ class Conctr {
 
                 // Unrecoverable error or max retries, dont bother retrying let the user handle it.
                 local err = "HTTP error code: " + resp.statuscode;
-                // Call all callbacks 
+                // Call all callbacks
                 if (typeof cb != "array") cb = [cb];
                 foreach (func in cb) {
                     func(err, resp);
@@ -300,13 +300,13 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Takes a http request and retries request in specific scenarios like 429 or curl errors
-    // 
+    //
     // @param  {Object}   req       Http request
     // @param  {Function} cb        Function to call on response. Takes args (err, resp)
-    // @param  {Table}    opts      Table to specify retry opts. 
-    // 
+    // @param  {Table}    opts      Table to specify retry opts.
+    //
     function _requestWithRetry(method, url, headers, payload, opts = {}, cb = null) {
 
         if (opts == null || typeof opts == "function") {
@@ -369,14 +369,14 @@ class Conctr {
     }
 
 
-    // 
-    // Sends a request to the device to send its current location (array of wifis) if conditions in current location sending opts are met. 
-    // 
+    //
+    // Sends a request to the device to send its current location (array of wifis) if conditions in current location sending opts are met.
+    //
     function _getLocation() {
 
         if (!_locEnabled) {
 
-            // not recording location 
+            // not recording location
             if (DEBUG) server.log("Conctr: location recording is not enabled");
             return;
 
@@ -403,19 +403,19 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Function to set location recording options
-    // 
-    // @param opts {Table} - location recording options 
+    //
+    // @param opts {Table} - location recording options
     // {
     //   {Boolean}  locRecording - Should location be sent with data
     //   {Integer}  locInterval - Duration in seconds between location updates
-    //   {Boolean}  locSendOnce - Setting to true sends the location of the device only once when the device restarts 
+    //   {Boolean}  locSendOnce - Setting to true sends the location of the device only once when the device restarts
     //  }
-    // 
-    // NOTE: locRecording takes precedence over locSendOnce. Meaning if locRecording is set to false location will never be sent 
+    //
+    // NOTE: locRecording takes precedence over locSendOnce. Meaning if locRecording is set to false location will never be sent
     //       with the data until this flag is changed.
-    // 
+    //
     function _setLocationOpts(opts = {}) {
 
         if (DEBUG) server.log("Conctr: setting agent opts to: " + http.jsonencode(opts));
@@ -429,9 +429,9 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Sets up event listeners
-    // 
+    //
     function _setupListeners() {
 
         // Listen for data events from the device
@@ -466,22 +466,22 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Sets up endpoints for this agent
-    // 
+    //
     // @param  {Object} rocky Instantiated instance of the Rocky class
-    // 
+    //
     function _setupAgentApi(rocky) {
         if (DEBUG) server.log("Conctr: Set up agent endpoints");
         rocky.post("/conctr/claim", _handleClaimReq.bindenv(this));
     }
 
 
-    // 
+    //
     // Handles device claim response from Conctr
-    // 
+    //
     // @param  {Object} context Rocky context
-    // 
+    //
     function _handleClaimReq(context) {
 
         if (!("consumer_jwt" in context.req.body)) {
@@ -499,16 +499,16 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Claims a device for a consumer
-    // 
+    //
     // @param  {String} appId
     // @param  {String} deviceId
-    // @param  {String} consumer_jwt 
+    // @param  {String} consumer_jwt
     // @param  {String} region
     // @param  {String} env
     // @param  {Function} cb
-    // 
+    //
     function _claimDevice(consumer_jwt, cb = null) {
 
         local url = _formClaimEndpointUrl();
@@ -517,15 +517,15 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Forms and returns the insert data API endpoint for the current device and Conctr application
-    // 
+    //
     // @param  {String} appId
     // @param  {String} deviceId
     // @param  {String} region
     // @param  {String} env
     // @return {String} url endpoint that will accept the data payload
-    // 
+    //
     function _formDataEndpointUrl() {
 
         // This is the temporary value of the data endpoint.
@@ -536,15 +536,15 @@ class Conctr {
     }
 
 
-    // 
+    //
     // Forms and returns the claim device API endpoint for the current device and Conctr application
-    // 
+    //
     // @param  {String} appId
     // @param  {String} deviceId
     // @param  {String} region
     // @param  {String} env
     // @return {String} url endpoint that will accept the data payload
-    // 
+    //
     function _formClaimEndpointUrl() {
 
         // This is the temporary value of the data endpoint.
