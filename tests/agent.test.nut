@@ -73,12 +73,9 @@ class AgentTestCase extends ImpTestCase {
             }
             // Send the payload
             conctr.sendData(payload, function(err, resp) {
-                if (err) reject(err);
-
                 // assert the data was not accepted
                 try {
-                    this.info(resp.statuscode);
-                    this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
+                    this.assertEqual(CONCTR_TEST_HTTP_BAD_REQUEST, resp.statuscode);
                     resolve();
                 } catch(error) {
                     reject(error);
