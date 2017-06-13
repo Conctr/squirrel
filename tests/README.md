@@ -11,9 +11,10 @@ The instructions will show you how to set up Conctr so that the tests can be run
 1. Click on the "Create Model" button
 1. In the model Name box write "testModel"
 1. In the "Add Standard Field" dropdown box select temperature
+1. In the "Add Standard Field" dropdown box select humidity
 1. Click "Create Model"
 1. Navigate to the View Models Tabs
-1. Click "Example" next your "testModel" model
+1. Click "Example" next to your "testModel" model
 1. In the Payload Example Click the "Squirrel" tab
 1. In the agent section note you APP_ID, API_KEY and MODEL   
 
