@@ -26,7 +26,9 @@ APP_ID         | Your Conctr application id
 API_KEY        | Your Conctr api key
 MODEL          | Your Conctr Application model name
 
+## Agent and device files
+The agent and device files for imptest are located in the build_files folder.
 
 # License
 
- The Conctr library is licensed under the [MIT License](../LICENSE).
+The Conctr library is licensed under the [MIT License](../LICENSE).
