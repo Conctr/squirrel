@@ -22,6 +22,7 @@
 
 const CONCTR_TEST_HTTP_CREATED = 201;
 const CONCTR_TEST_HTTP_UNAUTHORIZED = 401;
+const CONCTR_TEST_HTTP_BAD_REQUEST = 400;
 
 
 class AgentTestCase extends ImpTestCase {
@@ -32,7 +33,7 @@ class AgentTestCase extends ImpTestCase {
 
 
 
-    // test the sendData function checks for a http created response
+    // test the sendData function sent correctly checks for a http created response
     function testSendData() {
         return Promise(function(resolve, reject) {
             // Ensure this payload matches your model
@@ -55,6 +56,34 @@ class AgentTestCase extends ImpTestCase {
 
             }.bindenv(this))
 
+        }.bindenv(this))
+    }
+
+
+
+    // test the sendData function where the payload contains fields not in
+    // the conctr model
+    // checks for a http bad request response
+    function testSendInvalidPayload() {
+        return Promise(function(resolve, reject) {
+            // Ensure this payload matches your model
+            local payload = {
+                "FIELD_NOT_IN_MODEL": 15,
+            }
+            // Send the payload
+            conctr.sendData(payload, function(err, resp) {
+                if (err) reject(err);
+
+                // assert the data was not accepted
+                try {
+                    this.info(resp.statuscode);
+                    this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
+                    resolve();
+                } catch(error) {
+                    reject(error);
+                }
+
+            }.bindenv(this))
         }.bindenv(this))
     }
 
@@ -87,7 +116,7 @@ class AgentTestCase extends ImpTestCase {
 
 
     // tests the rocky endpoints
-    // currently not set to run 
+    // currently not set to run
     function xtestRockyEndpoints() {
 
         return Promise(function(resolve, reject) {

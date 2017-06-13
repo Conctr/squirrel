@@ -20,8 +20,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+// HTTP STATUS CODES
 const CONCTR_TEST_HTTP_CREATED = 201;
 const CONCTR_TEST_HTTP_UNAUTHORIZED = 401;
+
+// Data
+const CONCTR_TEST_DATA_INVALID_DATA_TYPE = "STRING";
+
+// error messages
+const CONCTR_ERROR_MESSAGE_INVALID_DATA = "Conctr: Payload must contain a table or an array of tables"
 
 class DeviceTestCase extends ImpTestCase {
 
@@ -49,7 +56,7 @@ class DeviceTestCase extends ImpTestCase {
                         // assert the data was accepted
                         this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
                     } else {
-                        // resp will be null as there is no messageManager to get a response from
+                        // response will be null as there is no messageManager to get a response from
                         this.assertTrue(resp == null);
                     }
                     resolve();
@@ -59,6 +66,18 @@ class DeviceTestCase extends ImpTestCase {
 
             }.bindenv(this))
         }.bindenv(this))
+    }
+
+
+
+    // tests the sending an invalid datatype via the sendData function,
+    // checks that correct error message is thrown
+    function testSendInvalidData() {
+        try {
+            conctr.sendData(CONCTR_TEST_DATA_INVALID_DATA_TYPE, null);
+        } catch(error) {
+            this.assertTrue(error == CONCTR_ERROR_MESSAGE_INVALID_DATA, error);
+        }
     }
 
 
