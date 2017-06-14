@@ -12,7 +12,7 @@ To use this library you will need to:
 - Create an application.
 - Create a model within the application.
 
-**To add this library to your project, add** `#require "conctr.agent.lib.nut:2.0.0"` **to the top of your agent code and add** `#require "conctr.device.class.nut:2.0.0"` **to the top of your device code**
+**To add this library to your project, add** `#require "conctr.agent.lib.nut:2.0.0"` **to the top of your agent code and add** `#require "conctr.device.lib.nut:2.0.0"` **to the top of your device code**
 
 ## Agent Class Usage
 ### Constructor: Conctr(*appId, apiKey, model[, options]*)
@@ -97,7 +97,7 @@ Allows you to override the current location options. Calling the method without 
 #### Example
 
 ```squirrel
-#require "conctr.device.class.nut:2.0.0"
+#require "conctr.device.lib.nut:2.0.0"
 
 // change options to disable location sending altogether
 local opts = {
