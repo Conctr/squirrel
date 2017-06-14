@@ -34,6 +34,30 @@ The constructor takes three required parameters: *appId, apiKey* and *model*. Th
 #### Example
 
 ```squirrel
+#require "conctr.agent.lib.nut:2.0.0"
+
+const API_KEY = "<YOUR API KEY>";
+const APP_ID = "<YOUR AUTHENTICATION TOKEN>";
+const MODEL = "<YOUR MODEL>";
+
+conctr <- Conctr(APP_ID, API_KEY, MODEL);
+```
+
+## Agent Class Methods
+
+### setDeviceId(*[deviceId]*)
+
+The *setDeviceId()* method allows you the set the unique identifier that will be used by Conctr to identify the current device. 
+
+**Note** Changing the device ID after data has already been set previously will create a new device in Conctr. There will be no link between any data from this newly created device and the device data linked to the previous device ID.
+
+| Key | Data Type | Required | Default Value | Description |
+| --- | --------- | -------- | ------------- | ----------- |
+| *deviceId* | String | No | `imp.configparams.deviceid` | Custom unique identifier that Conctr should store data against for this device |
+
+#### Example
+
+```squirrel
 const CUSTOM_DEVICE_ID = "device-1";
 
 conctr.setDeviceId(CUSTOM_DEVICE_ID);
