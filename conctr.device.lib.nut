@@ -27,7 +27,6 @@ class Conctr {
     // Events
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ_EVENT = "conctr_get_location";
-    static AGENT_OPTS_EVENT = "conctr_agent_options";
 
     // Data source label
     static SOURCE_DEVICE = "impdevice";
@@ -74,6 +73,7 @@ class Conctr {
     //
     constructor(opts = {}) {
         _locWakeReasons = [];
+
         // Grab any constructor options
         _sender = ("messageManager" in opts) ? opts.messageManager : agent;
 
@@ -113,15 +113,6 @@ class Conctr {
         _locTimeout = 0;
         _locSent = false;
 
-        if (DEBUG) server.log("Conctr: setting agent options from device");
-
-        // Send the agent opts to set opts
-        _sendAgentOpts({
-            "locInterval": _locInterval,
-            "locSendOnce": _locSendOnce,
-            "locEnabled": _locEnabled,
-            "locWakeReasons": _locWakeReasons
-        });
     }
 
 
@@ -216,33 +207,35 @@ class Conctr {
 
 
     //
+    // Sends current location to the agent or to Conctr
+    //
+    // @param  {Boolean} sentToConctr - If true the location will be sent to Conctr. If false, it will be cached on the agent.
+    //
+    function sendLocation(sentToConctr = true) {
+
+        if (DEBUG) server.log("Conctr: sending location to " + (sentToConctr ? "conctr" : "agent"));
+        _sender.send(LOCATION_REQ_EVENT, { "_location": imp.scanwifinetworks(), "sentToConctr": sentToConctr });
+        _locTimeout = (hardware.millis() / 1000) + _locInterval;
+        _locSent = true;
+
+    }
+
+
+    //
     // Sets up event listeners
     //
     function _setupListeners() {
+
+        // Listen for location requests from the agent
         _sender.on(LOCATION_REQ_EVENT, function(msg, reply = null) {
             // Handle both agent.send and messageManager.send syntax
-            msg = ("data" in msg) ? msg.data : msg;
-            sendData({});
             if (DEBUG) server.log("Conctr: received a location request from agent");
+            msg = ("data" in msg) ? msg.data : msg;
+            sendLocation(msg == true);
         }.bindenv(this));
+
     }
 
-
-    //
-    // Sends set currently set location opts to the agent
-    //
-    // @param  {Table} options - Table containing options to be sent to the agent
-    //
-    function _sendAgentOpts(opts) {
-        // Get only relevant opts
-        local agent_opts = {};
-        foreach (opt in AGENT_OPTS) {
-            if (opt in opts) {
-                agent_opts[opt] <- opts[opt];
-            }
-        }
-        _sender.send(AGENT_OPTS_EVENT, agent_opts);
-    }
 
     //
     // Checks current location recording options and returns true if location should be sent

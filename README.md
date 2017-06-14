@@ -28,7 +28,7 @@ The constructor takes three required parameters: *appId, apiKey* and *model*. Th
 | *options.region*          | String    | No       | `"us-west-2"` |  Region of the instance to use. Currently only `"us-west-2"` is supported |
 | *options.environment*     | String    | No       | `"staging"`   | Conctr environment to send data to |
 | *options.rocky*           | Object    | No       | `null`        | An instantiated [Rocky](https://electricimp.com/docs/libraries/utilities/rocky/) object |
-| *options.messageManager*  | Object    | No       | `null`        | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) object. It will also accept an instantiated [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object |
+| *options.messageManager*  | Object    | No       | `null`        | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) or [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object |
 
 
 #### Example
@@ -80,7 +80,7 @@ Instantiates the Conctr device class. It takes an optional table used to set the
 | *options.locInterval*    | Integer       | `3600`         | Duration in seconds between location updates |
 | *options.locSendOnce*    | Boolean       | `true`         | Setting to `true` sends the location of the device only once |
 | *options.locWakeReasons* | Array/Integer | `[WAKEREASON_NEW_SQUIRREL, WAKEREASON_POWER_ON]` | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only |
-| *options.messageManager* | Object        |`agent`         | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) object. It will also accept an instantiated [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object or an instantiated [ImpPager](https://github.com/electricimp/ReplayMessenger) object |
+| *options.messageManager* | Object        |`agent`         | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/), [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) or [ImpPager](https://github.com/electricimp/ReplayMessenger) object |
 
 ### setLocationOpts(*[options]*)
 
@@ -97,8 +97,6 @@ Allows you to override the current location options. Calling the method without 
 #### Example
 
 ```squirrel
-#require "conctr.device.lib.nut:2.0.0"
-
 // change options to disable location sending altogether
 local opts = {
     "locEnabled" : false,
