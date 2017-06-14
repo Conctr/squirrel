@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#require "conctr.agent.class.nut:2.0.0"
+#require "conctr.agent.lib.nut:2.0.0"
 #require "bullwinkle.class.nut:2.3.2"
 
 // Configure bullwinkle
