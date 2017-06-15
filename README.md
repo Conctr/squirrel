@@ -49,7 +49,7 @@ conctr <- Conctr(APP_ID, API_KEY, MODEL);
 
 The *setDeviceId()* method allows you the set the unique identifier that will be used by Conctr to identify the current device. 
 
-**Note** Changing the device ID after data has already been set previously will create a new device in Conctr. There will be no link between any data from this newly created device and the device data linked to the previous device ID.
+**Note** Changing the device ID after data has already been sent at least once before will create a new device in Conctr. There will be no link between any data from this newly created device and the device data linked to the previous device ID.
 
 | Key | Data Type | Required | Default Value | Description |
 | --- | --------- | -------- | ------------- | ----------- |
@@ -108,7 +108,7 @@ conctr.sendLocation()
 ```
 
 ## Device Class Usage
-**NOTE:** The device class is optional. It provides utility functions for interfacing with the agent class like automating the location sending process and provide queueing and error handling for sending data to conctr.
+**NOTE:** The device class is optional. It provides utility functions for interfacing with the agent class like automating the location sending process and provide queueing and error handling for sending data to Conctr.
 ### Constructor: Conctr(*[options]*)
 
 Instantiates the Conctr device class. It takes an optional table used to set the configuration of the class. *options* may contain any of the following keys:
@@ -139,7 +139,8 @@ Allows you to override the current location options. Calling the method without 
 // change options to disable location sending altogether
 local opts = {
     "locEnabled" : false,
-    };
+};
+
 conctr.setLocationOpts(opts)
 ```
 
@@ -199,8 +200,18 @@ Sends the current location to Conctr.
 #### Example
 
 ```squirrel
-// Send location to conctr
+// Send location to Conctr
 conctr.sendLocation()
+```
+
+## Troubleshooting
+Both the agent and the device libraries have a DEBUG mode. Setting `conctr.DEBUG` to true will enable extra logging to help troubleshoot any issues you may run into. 
+
+#### Example
+
+```squirrel
+// Enable debug mode
+conctr.DEBUG = true;
 ```
 ## License
 
