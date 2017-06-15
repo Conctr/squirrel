@@ -143,7 +143,7 @@ The *sendData()* method is used to send a data payload to Conctr via the agent.
 | Callback Parameter | Data Type | Description |
 | ------------------ | --------- | ----------- |
 | *error*            | String    | An error message if there was a problem, or null if successful |
-| *connection*       | Object    | An http response object or null if messageManager or equivalent not passed in |
+| *connection*       | Object    | An http response object if messageManager (or equivalent) is in use or an Imp (Send Error Code)[https://electricimp.com/docs/api/agent/send/#senderror] if not  |
 
 #### Example
 

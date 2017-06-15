@@ -180,9 +180,10 @@ class Conctr {
                 }.bindenv(this));
             } else if (callback) {
                 // We are asked to callback but we don't have an real callback
-                local err = (handler == 0) ? null : "Conctr: Send error " + handler;
+                local err = (handler == 0) ? null : "Conctr: Send error: " + handler;
+                local res = (typeof handler == "integer") ? handler : null;
                 imp.wakeup(0, function() {
-                    callback(err, null);
+                    callback(err, res);
                 }.bindenv(this));
             }
 
