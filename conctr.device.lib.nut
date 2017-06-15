@@ -210,12 +210,12 @@ class Conctr {
     //
     // Sends current location to the agent or to Conctr
     //
-    // @param  {Boolean} sentToConctr - If true the location will be sent to Conctr. If false, it will be cached on the agent.
+    // @param  {Boolean} sendToConctr - If true the location will be sent to Conctr. If false, it will be cached on the agent.
     //
-    function sendLocation(sentToConctr = true) {
+    function sendLocation(sendToConctr = true) {
 
-        if (DEBUG) server.log("Conctr: sending location to " + (sentToConctr ? "conctr" : "agent"));
-        _sender.send(LOCATION_REQ_EVENT, { "_location": imp.scanwifinetworks(), "sentToConctr": sentToConctr });
+        if (DEBUG) server.log("Conctr: sending location to " + (sendToConctr ? "conctr" : "agent"));
+        _sender.send(LOCATION_REQ_EVENT, { "_location": imp.scanwifinetworks(), "sendToConctr": sendToConctr });
         _locTimeout = (hardware.millis() / 1000) + _locInterval;
         _locSent = true;
 

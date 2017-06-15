@@ -198,12 +198,12 @@ class Conctr {
     //
     // Requests the device sends its current location to the agent or to Conctr
     //
-    // @param  {Boolean} sentToConctr - If true the location will be sent to Conctr. If false, it will be cached on the agent.
+    // @param  {Boolean} sendToConctr - If true the location will be sent to Conctr. If false, it will be cached on the agent.
     //
-    function sendLocation(sentToConctr = true) {
+    function sendLocation(sendToConctr = true) {
 
-        if (DEBUG) server.log("Conctr: requesting location be sent to " + (sentToConctr ? "conctr" : "agent"));
-        _sender.send(LOCATION_REQ_EVENT, sentToConctr);
+        if (DEBUG) server.log("Conctr: requesting location be sent to " + (sendToConctr ? "conctr" : "agent"));
+        _sender.send(LOCATION_REQ_EVENT, sendToConctr);
 
     }
     
@@ -390,7 +390,7 @@ class Conctr {
             if (typeof msg == "table" && "_location" in msg && msg._location != null) {
                 // Grab the location payload
                 _location = msg._location;
-                if ("sentToConctr" in msg && msg.sentToConctr == true) {
+                if ("sendToConctr" in msg && msg.sendToConctr == true) {
                     // And send it to Conctr
                     if (DEBUG) server.log("Conctr: sending location to conctr");
                     sendData({});

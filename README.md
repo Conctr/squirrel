@@ -92,6 +92,21 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
 }.bindenv(this));
 ```
 
+### sendLocation(*[sendToConctr]*)
+
+Retrieves the current location from the device and sends it to Conctr.
+
+| Key             | Data Type | Required | Description |
+| --------------- | --------- | -------- | ----------- |
+| *sendToConctr*  | Boolean   | Yes      | If true the location will be sent to Conctr. If false, it will be cached on the agent and sent with the next *sendData* invocation. |
+
+#### Example
+
+```squirrel
+// Send location to conctr
+conctr.sendLocation()
+```
+
 ## Device Class Usage
 **NOTE:** The device class is optional. It provides utility functions for interfacing with the agent class like automating the location sending process and provide queueing and error handling for sending data to conctr.
 ### Constructor: Conctr(*[options]*)
@@ -173,6 +188,20 @@ local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 conctr.send("Send a Packet", currentTempAndPressure);
 ```
 
+### sendLocation(*[sendToConctr]*)
+
+Sends the current location to Conctr.
+
+| Key             | Data Type | Required | Description |
+| --------------- | --------- | -------- | ----------- |
+| *sendToConctr*  | Boolean   | Yes      | If true the location will be sent to Conctr. If false, it will be cached on the agent and sent with the next *sendData* invocation. |
+
+#### Example
+
+```squirrel
+// Send location to conctr
+conctr.sendLocation()
+```
 ## License
 
 The Conctr library is licensed under [MIT License](./LICENSE).
