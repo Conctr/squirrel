@@ -96,9 +96,9 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
 
 Retrieves the current location from the device and sends it to Conctr.
 
-| Key             | Data Type | Required | Description |
-| --------------- | --------- | -------- | ----------- |
-| *sendToConctr*  | Boolean   | Yes      | If true the location will be sent to Conctr. If false, it will be cached on the agent and sent with the next *sendData* invocation. |
+| Key             | Data Type | Required | Default Value  | Description |
+| --------------- | --------- | -------- | -------------- | ----------- |
+| *sendToConctr*  | Boolean   | No       | True           | If true the location will be sent to Conctr. If false, it will be cached on the agent and sent with the next *sendData* invocation. |
 
 #### Example
 
@@ -115,11 +115,13 @@ Instantiates the Conctr device class. It takes an optional table used to set the
 
 | Key                      | Data Type     | Default Value  | Description |
 | ------------------------ | ------------- | -------------- | ----------- |
-| *options.locEnabled*     | Boolean       | `true`         | When enabled, location data will be automatically included with the data payload |
-| *options.locInterval*    | Integer       | `3600`         | Duration in seconds between location updates |
-| *options.locSendOnce*    | Boolean       | `true`         | Setting to `true` sends the location of the device only once |
-| *options.locWakeReasons* | Array/Integer | `[WAKEREASON_NEW_SQUIRREL, WAKEREASON_POWER_ON]` | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only |
-| *options.messageManager* | Object        |`agent`         | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/), [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) or [ImpPager](https://github.com/electricimp/ReplayMessenger) object |
+| *options*                | Table         | null           | Options to be send to the `setLocationOps()` function |
+
+#### Example
+
+```squirrel
+conctr <- Conctr();
+```
 
 ### setLocationOpts(*[options]*)
 
@@ -131,17 +133,14 @@ Allows you to override the current location options. Calling the method without 
 | *options.locEnabled*      | Boolean       | `true`        | When enabled, location data will be automatically included with the data payload |
 | *options.locInterval*     | Integer       | `3600`        | Duration in seconds between location updates |
 | *options.locSendOnce*     | Boolean       | `false`       | Setting to `true` sends the location of the device only once, when the device boots if other criteria are met |
-| *options.locWakeReasons*  | Array/Integer | `[WAKEREASON_NEW_SQUIRREL, WAKEREASON_POWER_ON]` | Send location on a specific [wake reason](https://electricimp.com/docs/api/hardware/wakereason/) only |
+| *options.locWakeReasons*  | Array/Integer | `[WAKEREASON_NEW_SQUIRREL, WAKEREASON_POWER_ON]` | Only send location on one or more specific [wake reasons](https://electricimp.com/docs/api/hardware/wakereason/) |
 
 #### Example
 
 ```squirrel
 // change options to disable location sending altogether
-local opts = {
-    "locEnabled" : false,
-};
-
-conctr.setLocationOpts(opts)
+local opts = { "locEnabled" : false };
+conctr.setLocationOpts(opts);
 ```
 
 ### sendData(*payload[, callback]*)
@@ -153,8 +152,7 @@ The *sendData()* method is used to send a data payload to Conctr via the agent.
 | Key        | Data Type | Required | Description |
 | ---------- | --------- | -------- | ----------- |
 | *payload*  | Table     | Yes      | A table containing the data to be sent to Conctr. This keys in the table should correspond to fields from the model and the keys should be of type specified in the model |
-| *callback* | Function  | No       | Function to be called on response from Conctr. The function should take two arguements, *error* and *response*. When no error occurred, the first arguement will be null |
-
+| *callback* | Function  | No       | Function to be called on response from Conctr. The function should take two arguements, *error* and *response*. When no error occurred, the first arguement will be null. If a messageManager is in use then the callback will be fired when the Conctr platform has accepted/rejected the message. If no messageManager is in use then the callback will fire immediately upon sending. |
 
 | Callback Parameter | Data Type | Description |
 | ------------------ | --------- | ----------- |
@@ -170,7 +168,7 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
     if (error) {
         server.error("Failed to deliver to Conctr: " + error);
     } else {
-        server.log("Data was successfully received from the device by Conctr");
+        server.log("Data was successfully send");
     }
 }.bindenv(this));
 ```
@@ -191,21 +189,21 @@ conctr.send("Send a Packet", currentTempAndPressure);
 
 ### sendLocation(*[sendToConctr]*)
 
-Sends the current location to Conctr.
+Retrieves the current location from the device and sends it to Conctr.
 
-| Key             | Data Type | Required | Description |
-| --------------- | --------- | -------- | ----------- |
-| *sendToConctr*  | Boolean   | Yes      | If true the location will be sent to Conctr. If false, it will be cached on the agent and sent with the next *sendData* invocation. |
+| Key             | Data Type | Required | Default Value  | Description |
+| --------------- | --------- | -------- | -------------- | ----------- |
+| *sendToConctr*  | Boolean   | No       | True           | If true the location will be sent to Conctr. If false, it will be cached on the agent and sent with the next *sendData* invocation. |
 
 #### Example
 
 ```squirrel
-// Send location to Conctr
+// Send location to conctr
 conctr.sendLocation()
 ```
 
 ## Troubleshooting
-Both the agent and the device libraries have a DEBUG mode. Setting `conctr.DEBUG` to true will enable extra logging to help troubleshoot any issues you may run into. 
+Both the agent and the device libraries have a DEBUG mode. Setting `DEBUG` to `true` will enable extra logging to help troubleshoot any issues you may run into. 
 
 #### Example
 
