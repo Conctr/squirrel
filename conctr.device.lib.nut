@@ -77,6 +77,11 @@ class Conctr {
         // Grab any constructor options
         _sender = ("messageManager" in opts) ? opts.messageManager : agent;
 
+        // Set the default values for the location options and then override them
+        _locInterval = DEFAULT_LOC_INTERVAL;
+        _locSendOnce = DEFAULT_LOC_SEND_ONCE;
+        _locEnabled = DEFAULT_LOC_ENABLED;
+        _locWakeReasons = DEFAULT_WAKE_REASONS;
         setLocationOpts(opts);
 
         _setupListeners();
@@ -88,26 +93,24 @@ class Conctr {
     //
     // @param opts {Table} - location recording options
     // {
-    //   {Boolean}  locEnabled - Should location be sent with data
-    //   {Integer}  locInterval - Duration in milliseconds since last location update to wait before sending a new location
-    //   {Boolean}  locSendOnce - Setting to true sends the location of the device only once when the device restarts
+    //   {Boolean}       locEnabled - Should location be sent with data
+    //   {Integer}       locInterval - Duration in milliseconds since last location update to wait before sending a new location
+    //   {Boolean}       locSendOnce - Setting to true sends the location of the device only once when the device restarts
+    //   {Array/Integer} locWakeReasons - Send the location only when the imp.wakereason() is one of these values
     //  }
     //
-    // NOTE: locEnabled takes precedence over locSendOnce. Meaning if locEnabled is set to false location will never be sent
-    //       with the data until this flag is changed.
+    // NOTE: locEnabled takes precedence over all other options. Meaning if locEnabled is set to false location will never be sent automatically.
     //
     function setLocationOpts(opts = {}) {
 
-        _locInterval = ("locInterval" in opts && opts.locInterval != null) ? opts.locInterval : DEFAULT_LOC_INTERVAL;
-        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : DEFAULT_LOC_SEND_ONCE;
-        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : DEFAULT_LOC_ENABLED;
-        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : DEFAULT_WAKE_REASONS;
+        _locInterval = ("locInterval" in opts && opts.locInterval != null) ? opts.locInterval : _locInterval;
+        _locSendOnce = ("locSendOnce" in opts && opts.locSendOnce != null) ? opts.locSendOnce : _locSendOnce;
+        _locEnabled = ("locEnabled" in opts && opts.locEnabled != null) ? opts.locEnabled : _locEnabled;
+        _locWakeReasons = ("locWakeReasons" in opts && opts.locWakeReasons != null) ? opts.locWakeReasons : _locWakeReasons;
 
         // Convert wake reasons to an array
         if (typeof _locWakeReasons != "array") {
             _locWakeReasons = [_locWakeReasons];
-            // Change the original so array check does not need to be done on agent
-            opts.locWakeReasons = _locWakeReasons;
         }
 
         _locTimeout = 0;
