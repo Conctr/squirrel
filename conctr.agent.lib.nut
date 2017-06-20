@@ -426,32 +426,16 @@ class Conctr {
             return context.send(401, { "error": "'consumer_jwt' is a required parameter" });
         }
 
-        _claimDevice(context.req.body.consumer_jwt, function(err, resp) {
+        local url = _formClaimEndpointUrl();
+        local payload = { "consumer_jwt": context.req.body.consumer_jwt };
+        _requestWithRetry("post", url, _headers, http.jsonencode(payload), function(err, resp) {
             if (err != null) {
                 return context.send(400, { "error": err });
             }
             if (DEBUG) server.log("Conctr: Device claimed");
             return context.send(200, resp);
-        });
+        }.bindenv(this));
 
-    }
-
-
-    // 
-    // Claims a device for a consumer
-    // 
-    // @param  {String} appId
-    // @param  {String} deviceId
-    // @param  {String} consumer_jwt
-    // @param  {String} region
-    // @param  {String} env
-    // @param  {Function} cb
-    // 
-    function _claimDevice(consumer_jwt, cb = null) {
-
-        local url = _formClaimEndpointUrl();
-        local payload = { "consumer_jwt": consumer_jwt };
-        _requestWithRetry("post", url, _headers, http.jsonencode(payload), cb);
     }
 
 
