@@ -27,8 +27,8 @@ The constructor takes three required parameters: *appId, apiKey* and *model*. Th
 | *options.useAgentId*      | Boolean   | No       | `false`       | Boolean flag used to determine whether to use the imp agent ID instead of the device ID as the primary identifier to Conctr for the data sent. See *setDeviceId()* to set a custom ID |
 | *options.region*          | String    | No       | `"us-west-2"` |  Region of the instance to use. Currently only `"us-west-2"` is supported |
 | *options.environment*     | String    | No       | `"staging"`   | Conctr environment to send data to |
-| *options.rocky*           | Object    | No       | `null`        | An instantiated [Rocky](https://electricimp.com/docs/libraries/utilities/rocky/) object |
-| *options.messageManager*  | Object    | No       | `null`        | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) or [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object |
+| *options.rocky*           | Object    | No       | `null`        | An instantiated [Rocky](https://electricimp.com/docs/libraries/utilities/rocky/) object to be used for accepting claim requests via HTTPS |
+| *options.messageManager*  | Object    | No       | `null`        | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) or [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object to be used for guaranteeing message delivery from the device to the agent |
 
 
 #### Example
@@ -94,7 +94,7 @@ conctr.sendData(currentTempAndPressure, function(error, response) {
 
 ### sendLocation(*[sendToConctr]*)
 
-Retrieves the current location from the device and sends it to Conctr.
+Retrieves the current location from the device and sends it to Conctr. This manual request ignores all location options.
 
 | Key             | Data Type | Required | Default Value  | Description |
 | --------------- | --------- | -------- | -------------- | ----------- |
@@ -189,7 +189,7 @@ conctr.send("Send a Packet", currentTempAndPressure);
 
 ### sendLocation(*[sendToConctr]*)
 
-Retrieves the current location from the device and sends it to Conctr.
+Retrieves the current location from the device and sends it to Conctr. This manual request ignores all location options.
 
 | Key             | Data Type | Required | Default Value  | Description |
 | --------------- | --------- | -------- | -------------- | ----------- |
@@ -201,6 +201,9 @@ Retrieves the current location from the device and sends it to Conctr.
 // Send location to conctr
 conctr.sendLocation()
 ```
+
+## Claiming the device
+A mobile application can claim the device on behalf a consumer, once they are logged into their account. The application should retrieve the `consumer_jwt` from the Conctr platform using the consumer OAuth process. The application should then POST to the device's agentURL, appending `/conctr/claim` to the end of the URL. The POST body should be a JSON table with the key `consumer_jwt`. The `Content-Type` header must be set to `application/json` for this to succeed.
 
 ## Troubleshooting
 Both the agent and the device libraries have a DEBUG mode. Setting `DEBUG` to `true` will enable extra logging to help troubleshoot any issues you may run into. 
