@@ -31,9 +31,6 @@ class Conctr {
     // Data source label
     static SOURCE_DEVICE = "impdevice";
 
-    // List of options the agent maintains a copy of
-    static AGENT_OPTS = ["locInterval", "locSendOnce", "locEnabled", "locWakeReasons"];
-
     // Default location recording opts
     static DEFAULT_LOC_ENABLED = true;
     static DEFAULT_LOC_INTERVAL = 3600;
