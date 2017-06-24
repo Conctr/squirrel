@@ -71,14 +71,14 @@ The *sendData()* method sends a data payload to Conctr via the data ingeston end
 | Key       | Data Type   | Required | Description |
 | --------- | ----------- | -------- | ----------- |
 | *payload* | Table/Array | Yes      | A table or array of tables containing the data to be sent to Conctr. The keys in the table should correspond to fields from the model and the keys should be of type specified in the model |
-| *callback* | Function   | No       | Function to be called on response from Conctr. The function should take two arguements, *error* and *response*. See table below for more info |
+| *callback* | Function   | No       | Function to be called on response from Conctr. The function should take two arguments, *error* and *response*. See table below for more info |
 
 The callback will be called with the following arguments:
 
 | Callback Parameter | Data Type | Description |
 | ------------------ | --------- | ----------- |
 | *error* | String | An error message if there was a problem, or null if successful |
-| *connection* | Object | An http response object |
+| *response* | Object | An http response object |
 
 #### Example
 
@@ -113,11 +113,11 @@ conctr.sendLocation()
 **NOTE:** The device class is optional. It provides utility functions for interfacing with the agent class like automating the location sending process and provide queueing and error handling for sending data to Conctr.
 ### Constructor: Conctr(*[options]*)
 
-Instantiates the Conctr device class. It takes an optional table used to set the configuration of the class. *options* may contain any of the following keys:
+Instantiates the Conctr device class. It takes an optional table used to set the location sending configuration of the class. See the *setLocationOpts()* below for details on the options keys.
 
 | Key                      | Data Type     | Default Value  | Description |
 | ------------------------ | ------------- | -------------- | ----------- |
-| *options*                | Table         | null           | Options to be send to the `setLocationOps()` function |
+| *options*                | Table         | null           | Options to be send to the `setLocationOpts()` function |
 
 #### Example
 
@@ -127,7 +127,7 @@ conctr <- Conctr();
 
 ### setLocationOpts(*[options]*)
 
-Allows you to override the current location options. Calling the method without any arguements sets location recording to defaults.
+Allows you to override the current location options. Calling the method without any arguments sets location recording to defaults.
 
 
 | Key                       | Data Type     | Default Value | Description |
@@ -154,14 +154,14 @@ The *sendData()* method is used to send a data payload to Conctr via the agent.
 | Key        | Data Type | Required | Description |
 | ---------- | --------- | -------- | ----------- |
 | *payload*  | Table     | Yes      | A table containing the data to be sent to Conctr. This keys in the table should correspond to fields from the model and the keys should be of type specified in the model |
-| *callback* | Function  | No       | Function to be called on response from Conctr. The function should take two arguements, *error* and *response*. When no error occurred, the first arguement will be null. If a messageManager is in use then the callback will be fired when the Conctr platform has accepted/rejected the message. If no messageManager is in use then the callback will fire immediately upon sending. |
+| *callback* | Function  | No       | Function to be called on response from Conctr. The function should take two arguments, *error* and *response*. When no error occurred, the first arguement will be null. If a messageManager is in use then the callback will be fired when the Conctr platform has accepted/rejected the message. If no messageManager is in use then the callback will fire immediately upon sending. |
 
 The callback will be called with the following arguments:
 
 | Callback Parameter | Data Type | Description |
 | ------------------ | --------- | ----------- |
 | *error*            | String    | An error message if there was a problem, or null if successful |
-| *connection*       | Object    | An http response object if messageManager (or equivalent) is in use or an Imp [Send Error Code](https://electricimp.com/docs/api/agent/send/#senderror) if not  |
+| *response*       | Object    | An http response object if messageManager (or equivalent) is in use or an Imp [Send Error Code](https://electricimp.com/docs/api/agent/send/#senderror) if not  |
 
 #### Example
 
