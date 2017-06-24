@@ -155,7 +155,9 @@ The *sendData()* method is used to send a data payload to Conctr via the agent.
 | ---------- | --------- | -------- | ----------- |
 | *payload*  | Table     | Yes      | A table containing the data to be sent to Conctr. This keys in the table should correspond to fields from the model and the keys should be of type specified in the model |
 | *callback* | Function  | No       | Function to be called on response from Conctr. The function should take two arguements, *error* and *response*. When no error occurred, the first arguement will be null. If a messageManager is in use then the callback will be fired when the Conctr platform has accepted/rejected the message. If no messageManager is in use then the callback will fire immediately upon sending. |
+
 The callback will be called with the following arguments:
+
 | Callback Parameter | Data Type | Description |
 | ------------------ | --------- | ----------- |
 | *error*            | String    | An error message if there was a problem, or null if successful |
