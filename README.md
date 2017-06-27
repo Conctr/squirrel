@@ -1,6 +1,5 @@
 # Conctr
 
-Conctr is a one stop platform that takes care of IoT complexity and lets you focus on what’s important.
 The Conctr library allows you to easily integrate your agent and device code with the [Conctr IoT Platform](https://conctr.com). This library provides an easy way to send data to a Conctr application.
 
 Click [here](https://api.staging.conctr.com/docs) for the full documentation of the Conctr API.
@@ -47,13 +46,13 @@ conctr <- Conctr(APP_ID, API_KEY, MODEL);
 
 ### setDeviceId(*[deviceId]*)
 
-The *setDeviceId()* method allows you the set the unique identifier that will be used by Conctr to identify the current device. 
+The *setDeviceId()* allows you the set the unique identifier that will be used by Conctr to identify the current device.
 
-**Note** Changing the device ID after data has already been sent at least once before will create a new device in Conctr. There will be no link between any data from this newly created device and the device data linked to the previous device ID.
+**Note** Changing the device ID after data has already been set previously will create a new device in Conctr. There will be no link between any data from this newly created device and the device data linked to the previous device ID.
 
 | Key | Data Type | Required | Default Value | Description |
 | --- | --------- | -------- | ------------- | ----------- |
-| *deviceId* | String | No | `imp.configparams.deviceid` | Custom unique identifier that Conctr should store data against for this device |
+| *deviceId* | String | No | `"imp.configparams.deviceid"` | Custom unique identifier that Conctr should store data against for this device |
 
 #### Example
 
@@ -66,7 +65,7 @@ conctr.setDeviceId(CUSTOM_DEVICE_ID);
 
 ### sendData(*payload[, callback]*)
 
-The *sendData()* method sends a data payload to Conctr via the data ingeston endpoint.
+The *sendData()* method sends a data payload to Conctr via the data ingeston endpoint. It is called by the data event listener when the device sends data using the Conctr device class. It can also be used directly to send data to Conctr via the agent alone.
 
 | Key       | Data Type   | Required | Description |
 | --------- | ----------- | -------- | ----------- |
@@ -87,7 +86,7 @@ local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(currentTempAndPressure, function(error, response) {
     if (error) {
-        server.error("Failed to deliver to Conctr: " + error);
+        // Handle error
     } else {
         server.log("Data was successfully recieved by Conctr");
     }
@@ -110,7 +109,9 @@ conctr.sendLocation()
 ```
 
 ## Device Class Usage
+
 **NOTE:** The device class is optional. It provides utility functions for interfacing with the agent class like automating the location sending process and provide queueing and error handling for sending data to Conctr.
+
 ### Constructor: Conctr(*[options]*)
 
 Instantiates the Conctr device class. It takes an optional table used to set the location sending configuration of the class. See the *setLocationOpts()* below for details on the options keys.
@@ -128,7 +129,6 @@ conctr <- Conctr();
 ### setLocationOpts(*[options]*)
 
 Allows you to override the current location options. Calling the method without any arguments sets location recording to defaults.
-
 
 | Key                       | Data Type     | Default Value | Description |
 | ------------------------- | ------------- | ------------- | ----------- |
@@ -170,9 +170,9 @@ local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(currentTempAndPressure, function(error, response) {
     if (error) {
-        server.error("Failed to deliver to Conctr: " + error);
+        // Handle error
     } else {
-        server.log("Data was successfully send");
+        server.log("Data was successfully recieved from the device by Conctr");
     }
 }.bindenv(this));
 ```
@@ -203,7 +203,7 @@ Retrieves the current location from the device and sends it to Conctr. This manu
 
 ```squirrel
 // Send location to conctr
-conctr.sendLocation()
+conctr.sendLocation();
 ```
 
 ## Claiming the device
@@ -220,6 +220,7 @@ conctr.DEBUG = true;
 ```
 
 In case of any questions/issues with the library please contact us at <support@conctr.com>
+
 ## License
 
 The Conctr library is licensed under [MIT License](./LICENSE).
