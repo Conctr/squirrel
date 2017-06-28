@@ -14,13 +14,6 @@ To use this library you will need to:
 - Create an application.
 - Create a model within the application.
 
-#### Example
-
-```squirrel
-// Enable debug mode
-conctr.DEBUG = true;
-```
-
 **To add this library to your project, add** `#require "conctr.agent.lib.nut:2.0.0"` **to the top of your agent code and add** `#require "conctr.device.lib.nut:2.0.0"` **to the top of your device code**
 
 ## Agent Class Usage
@@ -220,7 +213,14 @@ A mobile application can claim the device on behalf of a consumer, once they are
 
 ## Troubleshooting
 
-Both the agent and the device libraries have a debug mode. Setting a Conctr instance’s *DEBUG* property to `true` will enable extra logging to help troubleshoot any issues you may encounter. 
+Both the agent and the device libraries have a debug mode. Setting a Conctr instance’s *DEBUG* property to `true` will enable extra logging to help troubleshoot any issues you may encounter.
+
+#### Example
+
+```squirrel
+// Enable debug mode
+conctr.DEBUG = true;
+```
 
 ## License
 
