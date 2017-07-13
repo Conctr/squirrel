@@ -38,6 +38,19 @@ class Conctr {
     static RETRY_INTERVAL_DEFAULT = 5;
     static MAX_RETRY_INTERVAL = 60;
 
+    // PUB/SUB consts
+    static AMQP = "amqp";
+    static MQTT = "mqtt";
+
+    // protocol vars
+    _protocol = null;
+    _msgQueue = null;
+
+    // Pending queue status
+    _pendingReqs = null;
+    _pendingTimer = null;
+    _pollingReq = null;
+
     // Conctr Variables
     _api_key = null; // application programming interface key
     _app_id = null; // application id
@@ -94,6 +107,12 @@ class Conctr {
         _device_id = ("useAgentId" in opts && opts.useAgentId == true) ? split(http.agenturl(), "/").pop() : imp.configparams.deviceid;
         _rocky = ("rocky" in opts) ? opts.rocky : null;
         _sender = ("messageManager" in opts) ? opts.messageManager : device;
+
+        _protocol = ("protocol" in opts) ? opts.protocol : MQTT;
+        _pubSubEndpoints = _formPubSubEndpointUrls(_app_id, _device_id, _region, _env);
+
+        // Set up msg queue
+        _msgQueue = [];
 
         // Set up agent endpoints
         if (_rocky != null) {
@@ -195,18 +214,302 @@ class Conctr {
     }
 
 
-    //
+    // 
     // Requests the device sends its current location to the agent or to Conctr
-    //
+    // 
     // @param  {Boolean} sendToConctr - If true the location will be sent to Conctr. If false, it will be cached on the agent.
-    //
+    // 
     function sendLocation(sendToConctr = true) {
 
         if (DEBUG) server.log("Conctr: requesting location be sent to " + (sendToConctr ? "conctr" : "agent"));
         _sender.send(LOCATION_REQ_EVENT, sendToConctr);
 
     }
-    
+
+
+    // 
+    // Sets the protocal that should be used 
+    // 
+    // @param   {String}    protocol Either amqp or mqtt
+    // @return  {String}    current protocal after change
+    // 
+    function setProtocol(protocol) {
+        if (protocol == AMQP || protocol == MQTT) {
+            _protocol = protocol;
+        } else {
+            server.error(protocol + " is not a valid protocol.");
+        }
+        _pubSubEndpoints = _formPubSubEndpointUrls(_app_id, _api_key, _device_id, _region, _env);
+        return _protocol
+    }
+
+
+    // TODO: Include in docs : if content type is not provided the msg will be json encoded everytime. 
+    // or if anything other than a string is passed we will json enc.
+    // 
+    // Publishes a message to a specific topic.
+    // @param  {String/Array}   topics       List of Topics that message should be sent to
+    // @param  {[type]}         msg         Data to be sent to be published
+    // @param  {[type]}         contentType Header specifying the content type of the msg
+    // @param  {Function}       cb          Function called on completion of publish request
+    // 
+    function publish(topics, msg, contentType = null, cb = null) {
+        local relativeUrl = ""
+        _publish(relativeUrl, { "topics": topics }, msg, contentType, cb);
+
+    }
+
+    // 
+    // Publishes a message to a specific device.
+    // @param  {String/Array}   deviceId     Device id(s) the message should be sent to
+    // @param  {[type]}          msg         Data to be sent to be published
+    // @param  {[type]}          contentType Header specifying the content type of the msg
+    // @param  {Function}        cb          Function called on completion of publish request
+    // 
+    // TODO: Expiration
+    function publishToDevice(deviceIds, msg, contentType = null, cb = null) {
+        local relativeUrl = "/dev/";
+        _publish(relativeUrl, { "device_ids": deviceIds }, msg, contentType, cb);
+    }
+    // 
+    // Publishes a message to a specific service.
+    // @param  {String}   serviceName   Service that message should be sent to
+    // @param  {[type]}   msg           Data to be sent to be published
+    // @param  {[type]}   contentType   Header specifying the content type of the msg
+    // @param  {Function} cb            Function called on completion of publish request
+    // 
+    function publishToService(serviceName, msg, contentType = null, cb = null) {
+        local relativeUrl = "/sys/" + serviceName;
+        _publish(relativeUrl, null, msg, contentType, cb);
+    }
+
+
+    // 
+    // Subscribe to a single/list of topics
+    // @param  {Function}       cb     Function called on receipt of data
+    // @param  {Array/String}   topics String or Array of string topic names to subscribe to
+    // 
+    // TODO fix the optional callback and topic. i.e. cb should not be optional
+    function subscribe(topics = [], cb = null) {
+
+        if (typeof topics == "function") {
+            cb = topics;
+            topics = [];
+        }
+        if (typeof topics != "array") {
+            topics = [topics];
+        }
+
+        local action = "subscribe";
+        local headers = {};
+        local payload = {};
+        local chunks = "";
+        local contentLength = null;
+        local reqTime = time();
+
+        // http done callback
+        local _doneCb = function(resp) {
+
+            // We dont allow non chunked requests. So if we recieve a message in this func
+            // it is the last message of the steam and may contain the last chunk
+            if (resp.body == null && resp.body == "") {
+                _streamCb(resp.body);
+            }
+
+            local wakeupTime = 0;
+            local reconnect = function() {
+                subscribe(topics, cb);
+            }
+
+            if (resp.statuscode >= 200 && resp.statuscode <= 300) {
+                // wake up time is 0
+            } else if (resp.statuscode == 429) {
+                wakeupTime = 1;
+            } else {
+                // TODO check for some specific failures here, such as 401 and throw a callback without reconnecting
+                local conTime = time() - reqTime;
+                if (conTime < CONCTR_MIN_RECONNECT_TIME) {
+                    wakeupTime = CONCTR_MIN_RECONNECT_TIME - conTime;
+                }
+                server.error("Conctr: Subscribe failed with error code " + resp.statuscode);
+            }
+
+            // Reconnect in a bit or now based on disconnection reason
+            imp.wakeup(wakeupTime, reconnect.bindenv(this));
+        };
+
+        // Http streaming callback
+        local _streamCb = function(chunk) {
+
+            // User called unsubscribe. Close connection.
+            if (_pollingReq == null) return;
+
+            // accumulate chuncks till we get a full msg
+            chunks += chunk;
+
+            // Check whether we have received the content length yet (sent as first line of msg)
+            if (contentLength == null) {
+                // Sweet, we want to extract it out, itll be
+                // chilling just before the /r/n lets find it
+                local eos = chunks.find(STREAM_TERMINATOR);
+                // Got it! 
+                if (eos != null) {
+                    // Pull it out
+                    contentLength = chunks.slice(0, eos);
+                    contentLength = contentLength.tointeger();
+
+                    // Leave the rest of the msg
+                    chunks = chunks.slice(eos + STREAM_TERMINATOR.len());
+                }
+                // We have recieved the full content lets be process!
+            }
+
+            if (contentLength != null && chunks.len() >= contentLength) {
+                // Got a full msg, process it!
+                _processData(chunks.slice(0, contentLength), cb);
+
+                // Get any partial chunks if any and keep waiting for the end of new message
+                chunks = chunks.slice(contentLength + STREAM_TERMINATOR.len());
+                contentLength = null;
+            }
+        }
+
+        headers["Content-Type"] <- "application/json";
+        headers["Connection"] <- "keep-alive";
+        headers["Transfer-encoding"] <- "chunked";
+        headers["Authorization"] <- _conctrHeaders["Authorization"]
+        payload["topics"] <- topics;
+
+        // Check there isnt a current connection, close it if there is.
+        if (_pollingReq) _pollingReq.cancel();
+
+        _pollingReq = http.post(_pubSubEndpoints[action] + "/" + _device_id, headers, http.jsonencode(payload));
+
+        // Call callback directly when not chucked response, handle chuncking in second arg to sendAsync
+        _pollingReq.sendasync(_doneCb.bindenv(this), _streamCb.bindenv(this));
+    }
+
+
+    // 
+    // Unsubscribe to a single/list of topics
+    // 
+    // TODO boolean flag to specify whether to unsubscribe from topics as well or just close connection.
+    function unsubscribe() {
+        if (_pollingReq) _pollingReq.cancel();
+        _pollingReq = null;
+    }
+
+
+
+    // 
+    // Publishes a message to the correct url.
+    // @param  {String}   relativeUrl   relative url that the message should be posted to
+    // @param  {Table}    receivers     Object with either device_ids or topics
+    // @param  {[type]}   msg           Data to be sent to be published
+    // @param  {[type]}   contentType   Header specifying the content type of the msg
+    // @param  {Function} cb            Function called on completion of publish request
+    // 
+    // TODO handle non responsive http requests, using wakeup timers when there are multiple pending requests will
+    // cause the agent to fail. Look for a http retry class
+    function _publish(relativeUrl, receivers, msg, contentType = null, cb = null) {
+        local action = "publish";
+        local headers = {};
+        local reqTime = time();
+        local payload = { "msg": msg };
+
+        if (typeof contentType == "function") {
+            cb = contentType;
+            contentType = null;
+        }
+
+        if ("topics" in receivers) {
+            payload["topics"] <- receivers.topics;
+        } else if ("device_ids" in receivers) {
+            payload["device_ids"] <- receivers.device_ids;
+        }
+
+        if (contentType != null) {
+            payload["content-type"] <- contentType;
+        }
+
+        _requestWithRetry("post", _pubSubEndpoints[action] + relativeUrl, _conctrHeaders, http.jsonencode(payload), cb);
+    }
+
+
+     // 
+    // Processes a chunk of data received via poll
+    // @param  {String}   chunks String chunk of data recieved from polling request
+    // @param  {Function} cb     callback to call if a full message was found within chunk
+    // 
+    function _processData(chunks, cb) {
+        local response = _decode(chunks);
+        if (response.headers["content-type"] != "text/dummy") {
+            imp.wakeup(0, function() {
+                cb(response);
+            }.bindenv(this));
+        } else {
+            if (_DEBUG) {
+                server.log("Recieved the dummy message");
+            }
+        }
+        return;
+    }
+
+
+    // 
+    // Takes an encoded msg which contains headers and content and decodes it
+    // @param  {String}  encodedMsg http encoded message
+    // @return {Table}   decoded Table with keys headers and body
+    // 
+    function _decode(encodedMsg) {
+        local decoded = {};
+        local headerEnd = encodedMsg.find("\n\n");
+        local encodedHeader = encodedMsg.slice(0, headerEnd);
+        local encodedBody = encodedMsg.slice(headerEnd + "\n\n".len());
+        decoded.headers <- _parseHeaders(encodedHeader);
+        decoded.body <- _parseBody(encodedBody, decoded.headers);
+        return decoded;
+    }
+
+
+    // 
+    // Takes a http encoded string of header key value pairs and converts to a table of
+    // @param  {String} encodedHeader http encoded string of header key value pairs
+    // @return {Table}  Table of header key value pairs 
+    // 
+    function _parseHeaders(encodedHeader) {
+        local headerArr = split(encodedHeader, "\n");
+        local headers = {}
+        foreach (i, header in headerArr) {
+            local keyValArr = split(header, ":");
+            keyValArr[0] = strip(keyValArr[0]);
+            if (keyValArr[0].len() > 0) {
+                headers[keyValArr[0].tolower()] <- strip(keyValArr[1]);
+            }
+        }
+        return headers;
+    }
+
+
+    // 
+    // Takes a http encoded string of the message body and a list of headers and parses the body based on Content-Type header.
+    // @param  {String}   encodedBody http encoded string of header key value pairs
+    // @param  {String}   encodedBody http encoded string of header key value pairs
+    // @return {Table}    Table of header key value pairs 
+    // 
+    function _parseBody(encodedBody, headers) {
+
+        local body = encodedBody;
+        if ("content-type" in headers && headers["content-type"] == "application/json") {
+            try {
+                body = http.jsondecode(encodedBody);
+            } catch (e) {
+                server.error(e)
+            }
+        }
+        return body;
+    }
+
 
     // 
     // Posts a sendData payload to conctrs ingestion engine
@@ -474,5 +777,34 @@ class Conctr {
 
         // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
         // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s/claim", region, env, appId, deviceId);
+    }
+
+
+    
+
+    // 
+    // Forms and returns the insert data API endpoint for the current device and Conctr application
+    // 
+    // @param  {String} appId
+    // @param  {String} deviceId
+    // @param  {String} region
+    // @param  {String} env
+    // @return {String} url endpoint that will accept the data payload
+    // 
+    function _formPubSubEndpointUrls(appId, deviceId, region, env) {
+
+        local pubSubActions = ["subscribe", "publish"];
+        local endpoints = {};
+        foreach (idx, action in pubSubActions) {
+            if (!_LOCAL_MODE) {
+                endpoints[action] <- format("https://api.%s.conctr.com/%s/%s/%s", env, _protocol, appId, action);
+            } else {
+                server.log("CONCTR: Warning using localmode");
+                endpoints[action] <- format("http://%s.ngrok.io/%s/%s/%s", _ngrokID, _protocol, appId, action);
+            }
+            // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
+            // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
+        }
+        return endpoints;
     }
 }
