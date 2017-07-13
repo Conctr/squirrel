@@ -22,7 +22,7 @@
 
 class Conctr {
 
-    static VERSION = "2.0.0";
+    static VERSION = "2.1.0";
 
     // Events
     static DATA_EVENT = "conctr_data";
