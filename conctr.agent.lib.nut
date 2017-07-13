@@ -285,9 +285,10 @@ class Conctr {
     // or if anything other than a string is passed we will json enc.
     // 
     // Publishes a message to a specific topic.
-    // @param  {String/Array}   topics       List of Topics that message should be sent to
+    // 
+    // @param  {String/Array}   topics      List of Topics that message should be sent to
     // @param  {[type]}         msg         Data to be sent to be published
-    // @param  {[type]}         contentType Header specifying the content type of the msg
+    // @param  {[String}        contentType Header specifying the content type of the msg
     // @param  {Function}       cb          Function called on completion of publish request
     // 
     function publish(topics, msg, contentType = null, cb = null) {
@@ -326,6 +327,7 @@ class Conctr {
 
     // 
     // Subscribe to a single/list of topics
+    // 
     // @param  {Function}       cb     Function called on receipt of data
     // @param  {Array/String}   topics String or Array of string topic names to subscribe to
     // 

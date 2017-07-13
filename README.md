@@ -109,6 +109,60 @@ Retrieves the current location from the device and sends it to Conctr. This manu
 conctr.sendLocation()
 ```
 
+### publish(*topics, msg [, contentType] [, cb]*)
+
+Publishes a message to a specific topic.
+
+| Key             | Data Type | Required | Default Value  | Description |
+| --------------- | --------- | -------- | -------------- | ----------- |
+| *topics*  | Array   | Yes       | True           | List of Topics that message should be sent to. |
+| *msg*  | String   | Yes       | True           | Data to be sent to be published. |
+| *contentType*  | String   | No       | True           | Header specifying the content type of the msg. |
+| *cb*  | Function   | No       | True           | Function called on completion of publish request. |
+
+#### Example
+
+```squirrel
+local msg = "Hello World";
+
+// publish message
+conctr.publishToDevice(imp.configparams.deviceid, msg);
+```
+
+The callback will be called with the following arguments:
+
+| Callback Parameter | Data Type | Description |
+| ------------------ | --------- | ----------- |
+| *error* | String | An error message if there was a problem, or null if successful |
+
+
+### subscribe(*[, topics][, cb]*)
+
+Subscribe to a single/list of topics.
+
+| Key             | Data Type | Required | Default Value  | Description |
+| --------------- | --------- | -------- | -------------- | ----------- |
+| *topics*  | Array   | Yes       | True           | List of Topics that message should be sent to. |
+| *msg*  | String   | Yes       | True           | Data to be sent to be published. |
+| *contentType*  | String   | No       | True           | Header specifying the content type of the msg. |
+| *cb*  | Function   | No       | True           | Function called on completion of publish request. |
+
+#### Example
+
+```squirrel
+local msg = "Hello World";
+
+// publish message
+conctr.publishToDevice(imp.configparams.deviceid, msg);
+```
+
+The callback will be called with the following arguments:
+
+| Callback Parameter | Data Type | Description |
+| ------------------ | --------- | ----------- |
+| *error* | String | An error message if there was a problem, or null if successful |
+
+
 ## Device Class Usage
 **NOTE:** The device class is optional. It provides utility functions for interfacing with the agent class like automating the location sending process and provide queueing and error handling for sending data to Conctr.
 ### Constructor: Conctr(*[options]*)
