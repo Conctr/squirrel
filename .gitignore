@@ -1,4 +1,10 @@
 .conctr_creds
 .imptest
+.build_api_key.json
+settings.wrench
 tests/full_build_files
 runnable
+lib
+lib/*
+agent.*
+device.*

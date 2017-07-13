@@ -41,6 +41,8 @@ class Conctr {
     // PUB/SUB consts
     static AMQP = "amqp";
     static MQTT = "mqtt";
+    static STREAM_TERMINATOR = "\r\n";
+
 
     // protocol vars
     _protocol = null;
@@ -50,6 +52,9 @@ class Conctr {
     _pendingReqs = null;
     _pendingTimer = null;
     _pollingReq = null;
+
+    // Pub/sub endpoints
+    _pubSubEndpoints = null;
 
     // Conctr Variables
     _api_key = null; // application programming interface key
@@ -69,6 +74,10 @@ class Conctr {
 
     // Debug flag. If set, stuff will log
     DEBUG = false;
+
+    // Local testing using ngrok
+    _LOCAL_MODE = false;
+    _ngrokID = null;
 
 
     // 
@@ -107,6 +116,10 @@ class Conctr {
         _device_id = ("useAgentId" in opts && opts.useAgentId == true) ? split(http.agenturl(), "/").pop() : imp.configparams.deviceid;
         _rocky = ("rocky" in opts) ? opts.rocky : null;
         _sender = ("messageManager" in opts) ? opts.messageManager : device;
+
+        // pubsub debug opts
+        _LOCAL_MODE = ("useLocalMode" in opts) ? opts.useLocalMode : false;
+        _ngrokID = ("ngrokid" in opts) ? opts.ngrokid : null;
 
         _protocol = ("protocol" in opts) ? opts.protocol : MQTT;
         _pubSubEndpoints = _formPubSubEndpointUrls(_app_id, _device_id, _region, _env);
@@ -215,6 +228,30 @@ class Conctr {
 
 
     // 
+    // Retrieves this devices last recorded current values
+    // 
+    // @param  {Function} cb     Calback, should accept arguements (error, response)
+    // @param  {Array}   select Array of data value names as strings to select from current data stored
+    // 
+    function getLastReading(cb, select = null) {
+
+        local url = (_LOCAL_MODE == true) ? format("http://%s.ngrok.io/data/apps/%s/devices/%s/getdata", _ngrokID, _app_id, _device_id) : format("https://api.%s.conctr.com/data/apps/%s/devices/%s/getdata", _env, _app_id, _device_id);
+        select = (select != null) ? { "select": select } : {};
+
+        _requestWithRetry("post", url, _headers, http.jsonencode(select), function(err, resp) {
+            local response = null;
+            try {
+                response = http.jsondecode(resp.body);
+            } catch (e) {
+                response = resp;
+            }
+
+            cb(err, response);
+        }.bindenv(this));
+    }
+
+
+    // 
     // Requests the device sends its current location to the agent or to Conctr
     // 
     // @param  {Boolean} sendToConctr - If true the location will be sent to Conctr. If false, it will be cached on the agent.
@@ -259,6 +296,7 @@ class Conctr {
 
     }
 
+
     // 
     // Publishes a message to a specific device.
     // @param  {String/Array}   deviceId     Device id(s) the message should be sent to
@@ -271,6 +309,8 @@ class Conctr {
         local relativeUrl = "/dev/";
         _publish(relativeUrl, { "device_ids": deviceIds }, msg, contentType, cb);
     }
+
+
     // 
     // Publishes a message to a specific service.
     // @param  {String}   serviceName   Service that message should be sent to
@@ -328,8 +368,8 @@ class Conctr {
             } else {
                 // TODO check for some specific failures here, such as 401 and throw a callback without reconnecting
                 local conTime = time() - reqTime;
-                if (conTime < CONCTR_MIN_RECONNECT_TIME) {
-                    wakeupTime = CONCTR_MIN_RECONNECT_TIME - conTime;
+                if (conTime < MIN_RECONNECT_TIME) {
+                    wakeupTime = MIN_RECONNECT_TIME - conTime;
                 }
                 server.error("Conctr: Subscribe failed with error code " + resp.statuscode);
             }
@@ -377,7 +417,7 @@ class Conctr {
         headers["Content-Type"] <- "application/json";
         headers["Connection"] <- "keep-alive";
         headers["Transfer-encoding"] <- "chunked";
-        headers["Authorization"] <- _conctrHeaders["Authorization"]
+        headers["Authorization"] <- _headers["Authorization"]
         payload["topics"] <- topics;
 
         // Check there isnt a current connection, close it if there is.
@@ -432,11 +472,11 @@ class Conctr {
             payload["content-type"] <- contentType;
         }
 
-        _requestWithRetry("post", _pubSubEndpoints[action] + relativeUrl, _conctrHeaders, http.jsonencode(payload), cb);
+        _requestWithRetry("post", _pubSubEndpoints[action] + relativeUrl, _headers, http.jsonencode(payload), cb);
     }
 
 
-     // 
+    // 
     // Processes a chunk of data received via poll
     // @param  {String}   chunks String chunk of data recieved from polling request
     // @param  {Function} cb     callback to call if a full message was found within chunk
@@ -754,7 +794,7 @@ class Conctr {
     function _formDataEndpointUrl() {
 
         // This is the temporary value of the data endpoint.
-        return format("https://api.%s.conctr.com/data/apps/%s/devices/%s", _env, _app_id, _device_id);
+        return (_LOCAL_MODE == true) ? format("http://%s.ngrok.io/data/apps/%s/devices/%s", _ngrokID, _app_id, _device_id) : format("https://api.%s.conctr.com/data/apps/%s/devices/%s", _env, _app_id, _device_id);
 
         // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
         // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
@@ -780,7 +820,8 @@ class Conctr {
     }
 
 
-    
+
+
 
     // 
     // Forms and returns the insert data API endpoint for the current device and Conctr application
@@ -806,5 +847,12 @@ class Conctr {
             // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
         }
         return endpoints;
+    }
+
+
+    function _useLocalmode(ngrokid) {
+        _ngrokID = ngrokid;
+        _LOCAL_MODE = true;
+        _formPubSubEndpointUrls(_app_id, _device_id, _region, _env);
     }
 }
