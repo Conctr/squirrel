@@ -113,20 +113,25 @@ conctr.sendLocation()
 
 Publishes a message to a specific topic.
 
-| Key             | Data Type | Required | Default Value  | Description |
-| --------------- | --------- | -------- | -------------- | ----------- |
-| *topics*  | Array   | Yes       | True           | List of Topics that message should be sent to. |
-| *msg*  | String   | Yes       | True           | Data to be sent to be published. |
-| *contentType*  | String   | No       | True           | Header specifying the content type of the msg. |
-| *cb*  | Function   | No       | True           | Function called on completion of publish request. |
+| Key             | Data Type | Required  | Description |
+| --------------- | --------- | -------- | ----------- |
+| *topics*  | Array   | Yes | List of Topics that message should be sent to. |
+| *msg*  | String   | Yes  |Data to be sent to be published. |
+| *contentType*  | String   | No       |Header specifying the content type of the msg. |
+| *cb*  | Function   | No       | Function called on completion of publish request. |
 
 #### Example
 
 ```squirrel
 local msg = "Hello World";
 
-// publish message
-conctr.publishToDevice(imp.configparams.deviceid, msg);
+// publish message to topic 'test'
+conctr.publish(["test"], msg, function(err){
+
+if(err) server.error("Error"+err);
+else server.error("Successfully published message");
+
+}.bindenv(this));
 ```
 
 The callback will be called with the following arguments:
@@ -135,6 +140,36 @@ The callback will be called with the following arguments:
 | ------------------ | --------- | ----------- |
 | *error* | String | An error message if there was a problem, or null if successful |
 
+
+### publishToDevice(*deviceIds, msg [, contentType] [, cb]*)
+Publishes a message to a specific topic.
+
+| Key             | Data Type | Required  | Description |
+| --------------- | --------- | -------- | ----------- |
+| *deviceIds*  | Array   | Yes | List of device ids that the message should be sent to. |
+| *msg*  | String   | Yes  |Data to be published. |
+| *contentType*  | String   | No       |Header specifying the content type of the msg. |
+| *cb*  | Function   | No       | Function called on completion of publish request. |
+
+#### Example
+
+```squirrel
+local msg = "Hello World";
+
+// publish message to this device
+conctr.publishToDevice([imp.configparams.deviceid], msg, function(err){
+
+if(err) server.error("Error"+err);
+else server.error("Successfully published message");
+
+}.bindenv(this));
+```
+
+The callback will be called with the following arguments:
+
+| Callback Parameter | Data Type | Description |
+| ------------------ | --------- | ----------- |
+| *error* | String | An error message if there was a problem, or null if successful |
 
 ### subscribe(*[, topics][, cb]*)
 
@@ -153,7 +188,12 @@ Subscribe to a single/list of topics.
 local msg = "Hello World";
 
 // publish message
-conctr.publishToDevice(imp.configparams.deviceid, msg);
+conctr.publishToDevice(imp.configparams.deviceid, msg, function(err){
+
+if(err) server.error("Error"+err);
+else server.error("Successfully published message");
+
+}.bindenv(this));
 ```
 
 The callback will be called with the following arguments:
