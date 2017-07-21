@@ -43,7 +43,6 @@ class Conctr {
     static MQTT = "mqtt";
     static STREAM_TERMINATOR = "\r\n";
 
-
     // protocol vars
     _protocol = null;
     _msgQueue = null;
@@ -148,20 +147,20 @@ class Conctr {
     }
 
 
-    //
+    // 
     // Sends data to conctr
-    //
+    // 
     // @param  {Table or Array} payloadOrig - Table or Array containing data to be persisted
     // @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
-    //
+    // 
     function sendData(payloadOrig, callback = null) {
-        
+
         local payload = {};
 
         // Make a local copy to ensure that original payload is left unchanged
-        foreach(key, value in payloadOrig) {
+        foreach (key, value in payloadOrig) {
             payload[key] <- value;
-        } 
+        }
 
         // If it's a table, make it an array
         if (typeof payload == "table") {
@@ -340,10 +339,21 @@ class Conctr {
     // TODO fix the optional callback and topic. i.e. cb should not be optional
     function subscribe(topics = [], cb = null) {
 
+        // Check if only callback is subscribed to
         if (typeof topics == "function") {
             cb = topics;
             topics = [];
         }
+
+        if (cb == null) {
+            throw "Conctr: callback to subscribe is a required parameter";
+        }
+
+        // If no topics to subscribe to found, subscribe to this devices id
+        if (topics.len() == 0) {
+            topics = ["dev/" + imp.configparams.deviceid];
+        }
+
         if (typeof topics != "array") {
             topics = [topics];
         }
@@ -373,13 +383,15 @@ class Conctr {
                 // wake up time is 0
             } else if (resp.statuscode == 429) {
                 wakeupTime = 1;
+            } else if (resp.statuscode == 401) {
+                throw "Conctr: Authentication failed";
             } else {
                 // TODO check for some specific failures here, such as 401 and throw a callback without reconnecting
                 local conTime = time() - reqTime;
                 if (conTime < MIN_RECONNECT_TIME) {
                     wakeupTime = MIN_RECONNECT_TIME - conTime;
                 }
-                server.error("Conctr: Subscribe failed with error code " + resp.statuscode);
+                server.error("Conctr: Subscribe failed with error code " + resp.statuscode + ". Retrying in " + wakeupTime + " seconds");
             }
 
             // Reconnect in a bit or now based on disconnection reason
@@ -404,12 +416,15 @@ class Conctr {
                 if (eos != null) {
                     // Pull it out
                     contentLength = chunks.slice(0, eos);
-                    contentLength = contentLength.tointeger();
+                    try {
+                        contentLength = contentLength.tointeger();
+                    } catch (e) {
+                        server.error(e);
+                    }
 
                     // Leave the rest of the msg
                     chunks = chunks.slice(eos + STREAM_TERMINATOR.len());
                 }
-                // We have recieved the full content lets be process!
             }
 
             if (contentLength != null && chunks.len() >= contentLength) {
@@ -491,15 +506,14 @@ class Conctr {
     // 
     function _processData(chunks, cb) {
         local response = _decode(chunks);
-        if (response.headers["content-type"] != "text/dummy") {
-            imp.wakeup(0, function() {
+        imp.wakeup(0, function() {
+            if (response.body == UNSUBSCRIBE) {
+                if (DEBUG) server.log("Conctr: Got unsubscribe msg, disconnecting.");
+                unsubscribe();
+            } else {
                 cb(response);
-            }.bindenv(this));
-        } else {
-            if (_DEBUG) {
-                server.log("Recieved the dummy message");
             }
-        }
+        }.bindenv(this));
         return;
     }
 
@@ -655,7 +669,7 @@ class Conctr {
 
         // Reject invalid methods
         if (["GET", "POST"].find(method) == null) {
-            throw "Invalid method, must be either POST or GET";
+            throw "Conctr: Invalid method, must be either POST or GET";
         }
 
         local req = http.request(method, url, headers, payload);
