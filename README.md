@@ -27,6 +27,7 @@ The constructor takes three required parameters: *appId, apiKey* and *model*. Th
 | *options.useAgentId*      | Boolean   | No       | `false`       | Boolean flag used to determine whether to use the imp agent ID instead of the device ID as the primary identifier to Conctr for the data sent. See *setDeviceId()* to set a custom ID |
 | *options.region*          | String    | No       | `"us-west-2"` |  Region of the instance to use. Currently only `"us-west-2"` is supported |
 | *options.environment*     | String    | No       | `"staging"`   | Conctr environment to send data to |
+| *options.protocol*     | `conctr.MQTT` or `conctr.AMQP`    | No       | `conctr.MQTT`   | Protocol to use to send message NOTE: Currently only MQTT is supported. |
 | *options.rocky*           | Object    | No       | `null`        | An instantiated [Rocky](https://electricimp.com/docs/libraries/utilities/rocky/) object to be used for accepting claim requests via HTTPS |
 | *options.messageManager*  | Object    | No       | `null`        | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) or [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object to be used for guaranteeing message delivery from the device to the agent |
 
@@ -116,8 +117,8 @@ Publishes a message to a specific topic.
 | Key             | Data Type | Required  | Description |
 | --------------- | --------- | -------- | ----------- |
 | *topics*  | Array   | Yes | List of Topics that message should be sent to. |
-| *msg*  | String   | Yes  |Data to be sent to be published. |
-| *contentType*  | String   | No       |Header specifying the content type of the msg. |
+| *msg*  | Any   | Yes  |Data to be published. If anything other than a string is sent, it will be json encoded.|
+| *contentType*  | String   | No       |Header specifying the content type of the msg. If a contentType is not provided the msg will be json encoded by default|
 | *cb*  | Function   | No       | Function called on completion of publish request. |
 
 #### Example
@@ -128,8 +129,8 @@ local msg = "Hello World";
 // publish message to topic 'test'
 conctr.publish(["test"], msg, function(err){
 
-if(err) server.error("Error"+err);
-else server.error("Successfully published message");
+    if(err) server.error("Error"+err);
+    else server.log("Successfully published message");
 
 }.bindenv(this));
 ```
@@ -147,8 +148,8 @@ Publishes a message to a specific topic.
 | Key             | Data Type | Required  | Description |
 | --------------- | --------- | -------- | ----------- |
 | *deviceIds*  | Array   | Yes | List of device ids that the message should be sent to. |
-| *msg*  | String   | Yes  |Data to be published. |
-| *contentType*  | String   | No       |Header specifying the content type of the msg. |
+| *msg*  | Any   | Yes  |Data to be published. If anything other than a string is sent, it will be json encoded.|
+| *contentType*  | String   | No       |Header specifying the content type of the msg. If a contentType is not provided the msg will be json encoded by default|
 | *cb*  | Function   | No       | Function called on completion of publish request. |
 
 #### Example
@@ -159,8 +160,8 @@ local msg = "Hello World";
 // publish message to this device
 conctr.publishToDevice([imp.configparams.deviceid], msg, function(err){
 
-if(err) server.error("Error"+err);
-else server.error("Successfully published message");
+    if(err) server.error("Error"+err);
+    else server.log("Successfully published message");
 
 }.bindenv(this));
 ```
@@ -171,36 +172,55 @@ The callback will be called with the following arguments:
 | ------------------ | --------- | ----------- |
 | *error* | String | An error message if there was a problem, or null if successful |
 
+
 ### subscribe(*[, topics][, cb]*)
 
-Subscribe to a single/list of topics.
+Subscribe to a single/list of topics. NOTE: Calling subscribe again with a new set of topics will cancel any previous subscription requests.
 
 | Key             | Data Type | Required | Default Value  | Description |
 | --------------- | --------- | -------- | -------------- | ----------- |
-| *topics*  | Array   | Yes       | True           | List of Topics that message should be sent to. |
-| *msg*  | String   | Yes       | True           | Data to be sent to be published. |
-| *contentType*  | String   | No       | True           | Header specifying the content type of the msg. |
-| *cb*  | Function   | No       | True           | Function called on completion of publish request. |
+| *topics*  | Array   | Yes       | Currently set device id           | List of Topics to subscribe to. |
+| *cb*  | Function   | No       | True           | Function called on message receipt. |
 
 #### Example
 
 ```squirrel
-local msg = "Hello World";
+// Subscribe to default topics
+conctr.subscribe(function(response){
+    server.log("Got message:"+response.body)
+}.bindenv(this))
 
-// publish message
-conctr.publishToDevice(imp.configparams.deviceid, msg, function(err){
+// Publish in 2 seconds to ensure subscription is connected
+imp.wakeup(2, function(){
+    local msg = "Hello World";
+    
+    // publish message
+    conctr.publishToDevice(imp.configparams.deviceid, msg, function(err){
+    
+        if(err) server.error("Error"+err);
+        else server.error("Successfully published message");
+        
+    }.bindenv(this));
+}.bindenv(this))
 
-if(err) server.error("Error"+err);
-else server.error("Successfully published message");
-
-}.bindenv(this));
 ```
 
 The callback will be called with the following arguments:
 
 | Callback Parameter | Data Type | Description |
 | ------------------ | --------- | ----------- |
-| *error* | String | An error message if there was a problem, or null if successful |
+| *response* | Table | The http response received from Conctr. The message will be in `response.msg`. |
+
+### unsubscribe()
+
+unsubscribes from all topics.
+
+#### Example
+
+```squirrel
+// Unsubscribe 
+conctr.subscribe()
+```
 
 
 ## Device Class Usage

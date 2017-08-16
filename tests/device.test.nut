@@ -56,8 +56,9 @@ class DeviceTestCase extends ImpTestCase {
                         // assert the data was accepted
                         this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
                     } else {
-                        // response will be null as there is no messageManager to get a response from
-                        this.assertTrue(resp == null);
+                        server.log(resp)
+                        // response will be 0 as there is no messageManager to get a response from
+                        this.assertTrue(resp == 0);
                     }
                     resolve();
                 } catch(error) {

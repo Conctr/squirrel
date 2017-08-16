@@ -233,43 +233,6 @@ class Conctr {
 
 
     // 
-    // Retrieves this devices last recorded current values
-    // 
-    // @param  {Function} cb     Calback, should accept arguements (error, response)
-    // @param  {Array}   select Array of data value names as strings to select from current data stored
-    // 
-    function getLastReading(cb, select = null) {
-
-        local url = (_LOCAL_MODE == true) ? format("http://%s.ngrok.io/data/apps/%s/devices/%s/getdata", _ngrokID, _app_id, _device_id) : format("https://api.%s.conctr.com/data/apps/%s/devices/%s/getdata", _env, _app_id, _device_id);
-        select = (select != null) ? { "select": select } : {};
-
-        _requestWithRetry("post", url, _headers, http.jsonencode(select), function(err, resp) {
-            local response = null;
-            try {
-                response = http.jsondecode(resp.body);
-            } catch (e) {
-                response = resp;
-            }
-
-            cb(err, response);
-        }.bindenv(this));
-    }
-
-
-    // 
-    // Requests the device sends its current location to the agent or to Conctr
-    // 
-    // @param  {Boolean} sendToConctr - If true the location will be sent to Conctr. If false, it will be cached on the agent.
-    // 
-    function sendLocation(sendToConctr = true) {
-
-        if (DEBUG) server.log("Conctr: requesting location be sent to " + (sendToConctr ? "conctr" : "agent"));
-        _sender.send(LOCATION_REQ_EVENT, sendToConctr);
-
-    }
-
-
-    // 
     // Sets the protocal that should be used 
     // 
     // @param   {String}    protocol Either amqp or mqtt
@@ -286,8 +249,19 @@ class Conctr {
     }
 
 
-    // TODO: Include in docs : if content type is not provided the msg will be json encoded everytime. 
-    // or if anything other than a string is passed we will json enc.
+    // 
+    // Requests the device sends its current location to the agent or to Conctr
+    // 
+    // @param  {Boolean} sendToConctr - If true the location will be sent to Conctr. If false, it will be cached on the agent.
+    // 
+    function sendLocation(sendToConctr = true) {
+
+        if (DEBUG) server.log("Conctr: requesting location be sent to " + (sendToConctr ? "conctr" : "agent"));
+        _sender.send(LOCATION_REQ_EVENT, sendToConctr);
+
+    }
+
+
     // 
     // Publishes a message to a specific topic.
     // 
@@ -306,27 +280,13 @@ class Conctr {
     // 
     // Publishes a message to a specific device.
     // @param  {String/Array}   deviceId     Device id(s) the message should be sent to
-    // @param  {[type]}          msg         Data to be sent to be published
-    // @param  {[type]}          contentType Header specifying the content type of the msg
-    // @param  {Function}        cb          Function called on completion of publish request
+    // @param  {[type]}         msg          Data to be sent to be published
+    // @param  {[type]}         contentType  Header specifying the content type of the msg
+    // @param  {Function}       cb           Function called on completion of publish request
     // 
-    // TODO: Expiration
     function publishToDevice(deviceIds, msg, contentType = null, cb = null) {
         local relativeUrl = "/dev/";
         _publish(relativeUrl, { "device_ids": deviceIds }, msg, contentType, cb);
-    }
-
-
-    // 
-    // Publishes a message to a specific service.
-    // @param  {String}   serviceName   Service that message should be sent to
-    // @param  {[type]}   msg           Data to be sent to be published
-    // @param  {[type]}   contentType   Header specifying the content type of the msg
-    // @param  {Function} cb            Function called on completion of publish request
-    // 
-    function publishToService(serviceName, msg, contentType = null, cb = null) {
-        local relativeUrl = "/sys/" + serviceName;
-        _publish(relativeUrl, null, msg, contentType, cb);
     }
 
 
@@ -336,7 +296,6 @@ class Conctr {
     // @param  {Function}       cb     Function called on receipt of data
     // @param  {Array/String}   topics String or Array of string topic names to subscribe to
     // 
-    // TODO fix the optional callback and topic. i.e. cb should not be optional
     function subscribe(topics = [], cb = null) {
 
         // Check if only callback is subscribed to
@@ -351,7 +310,7 @@ class Conctr {
 
         // If no topics to subscribe to found, subscribe to this devices id
         if (topics.len() == 0) {
-            topics = ["dev/" + imp.configparams.deviceid];
+            topics = ["dev/" + _device_id];
         }
 
         if (typeof topics != "array") {
@@ -386,7 +345,6 @@ class Conctr {
             } else if (resp.statuscode == 401) {
                 throw "Conctr: Authentication failed";
             } else {
-                // TODO check for some specific failures here, such as 401 and throw a callback without reconnecting
                 local conTime = time() - reqTime;
                 if (conTime < MIN_RECONNECT_TIME) {
                     wakeupTime = MIN_RECONNECT_TIME - conTime;
@@ -446,7 +404,7 @@ class Conctr {
         // Check there isnt a current connection, close it if there is.
         if (_pollingReq) _pollingReq.cancel();
 
-        _pollingReq = http.post(_pubSubEndpoints[action] + "/" + _device_id, headers, http.jsonencode(payload));
+        _pollingReq = http.post(_pubSubEndpoints[action], headers, http.jsonencode(payload));
 
         // Call callback directly when not chucked response, handle chuncking in second arg to sendAsync
         _pollingReq.sendasync(_doneCb.bindenv(this), _streamCb.bindenv(this));
@@ -456,7 +414,6 @@ class Conctr {
     // 
     // Unsubscribe to a single/list of topics
     // 
-    // TODO boolean flag to specify whether to unsubscribe from topics as well or just close connection.
     function unsubscribe() {
         if (_pollingReq) _pollingReq.cancel();
         _pollingReq = null;
@@ -472,8 +429,6 @@ class Conctr {
     // @param  {[type]}   contentType   Header specifying the content type of the msg
     // @param  {Function} cb            Function called on completion of publish request
     // 
-    // TODO handle non responsive http requests, using wakeup timers when there are multiple pending requests will
-    // cause the agent to fail. Look for a http retry class
     function _publish(relativeUrl, receivers, msg, contentType = null, cb = null) {
         local action = "publish";
         local headers = {};
@@ -507,12 +462,7 @@ class Conctr {
     function _processData(chunks, cb) {
         local response = _decode(chunks);
         imp.wakeup(0, function() {
-            if (response.body == UNSUBSCRIBE) {
-                if (DEBUG) server.log("Conctr: Got unsubscribe msg, disconnecting.");
-                unsubscribe();
-            } else {
-                cb(response);
-            }
+            cb(response);
         }.bindenv(this));
         return;
     }

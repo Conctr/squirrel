@@ -22,7 +22,7 @@
 
 class Conctr {
 
-    static VERSION = "2.0.0";
+    static VERSION = "2.1.0";
 
     static DATA_EVENT = "conctr_data";
     static LOCATION_REQ_EVENT = "conctr_get_location";
@@ -37,6 +37,23 @@ class Conctr {
     static EXP_BACKOFF_DEFAULT = true;
     static RETRY_INTERVAL_DEFAULT = 5;
     static MAX_RETRY_INTERVAL = 60;
+
+    // PUB/SUB consts
+    static AMQP = "amqp";
+    static MQTT = "mqtt";
+    static STREAM_TERMINATOR = "\r\n";
+
+    // protocol vars
+    _protocol = null;
+    _msgQueue = null;
+
+    // Pending queue status
+    _pendingReqs = null;
+    _pendingTimer = null;
+    _pollingReq = null;
+
+    // Pub/sub endpoints
+    _pubSubEndpoints = null;
 
     // Conctr Variables
     _api_key = null; // application programming interface key
@@ -56,6 +73,10 @@ class Conctr {
 
     // Debug flag. If set, stuff will log
     DEBUG = false;
+
+    // Local testing using ngrok
+    _LOCAL_MODE = false;
+    _ngrokID = null;
 
 
     // 
@@ -95,6 +116,16 @@ class Conctr {
         _rocky = ("rocky" in opts) ? opts.rocky : null;
         _sender = ("messageManager" in opts) ? opts.messageManager : device;
 
+        // pubsub debug opts
+        _LOCAL_MODE = ("useLocalMode" in opts) ? opts.useLocalMode : false;
+        _ngrokID = ("ngrokid" in opts) ? opts.ngrokid : null;
+
+        _protocol = ("protocol" in opts) ? opts.protocol : MQTT;
+        _pubSubEndpoints = _formPubSubEndpointUrls(_app_id, _device_id, _region, _env);
+
+        // Set up msg queue
+        _msgQueue = [];
+
         // Set up agent endpoints
         if (_rocky != null) {
             _setupAgentApi(_rocky);
@@ -117,13 +148,19 @@ class Conctr {
 
 
     // 
-    // Sends data for persistance to Conctr
+    // Sends data to conctr
     // 
-    // @param  {Table or Array}          payload  - Table or Array containing data to be persisted
-    // @param  {Function (err,response)} callback - Callback function on http resp from Conctr
-    // @return {Null}
+    // @param  {Table or Array} payloadOrig - Table or Array containing data to be persisted
+    // @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
     // 
-    function sendData(payload, callback = null) {
+    function sendData(payloadOrig, callback = null) {
+
+        local payload = {};
+
+        // Make a local copy to ensure that original payload is left unchanged
+        foreach (key, value in payloadOrig) {
+            payload[key] <- value;
+        }
 
         // If it's a table, make it an array
         if (typeof payload == "table") {
@@ -195,18 +232,296 @@ class Conctr {
     }
 
 
-    //
+    // 
+    // Sets the protocal that should be used 
+    // 
+    // @param   {String}    protocol Either amqp or mqtt
+    // @return  {String}    current protocal after change
+    // 
+    function setProtocol(protocol) {
+        if (protocol == AMQP || protocol == MQTT) {
+            _protocol = protocol;
+        } else {
+            server.error(protocol + " is not a valid protocol.");
+        }
+        _pubSubEndpoints = _formPubSubEndpointUrls(_app_id, _api_key, _device_id, _region, _env);
+        return _protocol
+    }
+
+
+    // 
     // Requests the device sends its current location to the agent or to Conctr
-    //
+    // 
     // @param  {Boolean} sendToConctr - If true the location will be sent to Conctr. If false, it will be cached on the agent.
-    //
+    // 
     function sendLocation(sendToConctr = true) {
 
         if (DEBUG) server.log("Conctr: requesting location be sent to " + (sendToConctr ? "conctr" : "agent"));
         _sender.send(LOCATION_REQ_EVENT, sendToConctr);
 
     }
-    
+
+
+    // 
+    // Publishes a message to a specific topic.
+    // 
+    // @param  {String/Array}   topics      List of Topics that message should be sent to
+    // @param  {[type]}         msg         Data to be sent to be published
+    // @param  {[String}        contentType Header specifying the content type of the msg
+    // @param  {Function}       cb          Function called on completion of publish request
+    // 
+    function publish(topics, msg, contentType = null, cb = null) {
+        local relativeUrl = ""
+        _publish(relativeUrl, { "topics": topics }, msg, contentType, cb);
+
+    }
+
+
+    // 
+    // Publishes a message to a specific device.
+    // @param  {String/Array}   deviceId     Device id(s) the message should be sent to
+    // @param  {[type]}         msg          Data to be sent to be published
+    // @param  {[type]}         contentType  Header specifying the content type of the msg
+    // @param  {Function}       cb           Function called on completion of publish request
+    // 
+    function publishToDevice(deviceIds, msg, contentType = null, cb = null) {
+        local relativeUrl = "/dev/";
+        _publish(relativeUrl, { "device_ids": deviceIds }, msg, contentType, cb);
+    }
+
+
+    // 
+    // Subscribe to a single/list of topics
+    // 
+    // @param  {Function}       cb     Function called on receipt of data
+    // @param  {Array/String}   topics String or Array of string topic names to subscribe to
+    // 
+    function subscribe(topics = [], cb = null) {
+
+        // Check if only callback is subscribed to
+        if (typeof topics == "function") {
+            cb = topics;
+            topics = [];
+        }
+
+        if (cb == null) {
+            throw "Conctr: callback to subscribe is a required parameter";
+        }
+
+        // If no topics to subscribe to found, subscribe to this devices id
+        if (topics.len() == 0) {
+            topics = ["dev/" + _device_id];
+        }
+
+        if (typeof topics != "array") {
+            topics = [topics];
+        }
+
+        local action = "subscribe";
+        local headers = {};
+        local payload = {};
+        local chunks = "";
+        local contentLength = null;
+        local reqTime = time();
+
+        // http done callback
+        local _doneCb = function(resp) {
+
+            // We dont allow non chunked requests. So if we recieve a message in this func
+            // it is the last message of the steam and may contain the last chunk
+            if (resp.body == null && resp.body == "") {
+                _streamCb(resp.body);
+            }
+
+            local wakeupTime = 0;
+            local reconnect = function() {
+                subscribe(topics, cb);
+            }
+
+            if (resp.statuscode >= 200 && resp.statuscode <= 300) {
+                // wake up time is 0
+            } else if (resp.statuscode == 429) {
+                wakeupTime = 1;
+            } else if (resp.statuscode == 401) {
+                throw "Conctr: Authentication failed";
+            } else {
+                local conTime = time() - reqTime;
+                if (conTime < MIN_RECONNECT_TIME) {
+                    wakeupTime = MIN_RECONNECT_TIME - conTime;
+                }
+                server.error("Conctr: Subscribe failed with error code " + resp.statuscode + ". Retrying in " + wakeupTime + " seconds");
+            }
+
+            // Reconnect in a bit or now based on disconnection reason
+            imp.wakeup(wakeupTime, reconnect.bindenv(this));
+        };
+
+        // Http streaming callback
+        local _streamCb = function(chunk) {
+
+            // User called unsubscribe. Close connection.
+            if (_pollingReq == null) return;
+
+            // accumulate chuncks till we get a full msg
+            chunks += chunk;
+
+            // Check whether we have received the content length yet (sent as first line of msg)
+            if (contentLength == null) {
+                // Sweet, we want to extract it out, itll be
+                // chilling just before the /r/n lets find it
+                local eos = chunks.find(STREAM_TERMINATOR);
+                // Got it! 
+                if (eos != null) {
+                    // Pull it out
+                    contentLength = chunks.slice(0, eos);
+                    try {
+                        contentLength = contentLength.tointeger();
+                    } catch (e) {
+                        server.error(e);
+                    }
+
+                    // Leave the rest of the msg
+                    chunks = chunks.slice(eos + STREAM_TERMINATOR.len());
+                }
+            }
+
+            if (contentLength != null && chunks.len() >= contentLength) {
+                // Got a full msg, process it!
+                _processData(chunks.slice(0, contentLength), cb);
+
+                // Get any partial chunks if any and keep waiting for the end of new message
+                chunks = chunks.slice(contentLength + STREAM_TERMINATOR.len());
+                contentLength = null;
+            }
+        }
+
+        headers["Content-Type"] <- "application/json";
+        headers["Connection"] <- "keep-alive";
+        headers["Transfer-encoding"] <- "chunked";
+        headers["Authorization"] <- _headers["Authorization"]
+        payload["topics"] <- topics;
+
+        // Check there isnt a current connection, close it if there is.
+        if (_pollingReq) _pollingReq.cancel();
+
+        _pollingReq = http.post(_pubSubEndpoints[action], headers, http.jsonencode(payload));
+
+        // Call callback directly when not chucked response, handle chuncking in second arg to sendAsync
+        _pollingReq.sendasync(_doneCb.bindenv(this), _streamCb.bindenv(this));
+    }
+
+
+    // 
+    // Unsubscribe to a single/list of topics
+    // 
+    function unsubscribe() {
+        if (_pollingReq) _pollingReq.cancel();
+        _pollingReq = null;
+    }
+
+
+
+    // 
+    // Publishes a message to the correct url.
+    // @param  {String}   relativeUrl   relative url that the message should be posted to
+    // @param  {Table}    receivers     Object with either device_ids or topics
+    // @param  {[type]}   msg           Data to be sent to be published
+    // @param  {[type]}   contentType   Header specifying the content type of the msg
+    // @param  {Function} cb            Function called on completion of publish request
+    // 
+    function _publish(relativeUrl, receivers, msg, contentType = null, cb = null) {
+        local action = "publish";
+        local headers = {};
+        local reqTime = time();
+        local payload = { "msg": msg };
+
+        if (typeof contentType == "function") {
+            cb = contentType;
+            contentType = null;
+        }
+
+        if ("topics" in receivers) {
+            payload["topics"] <- receivers.topics;
+        } else if ("device_ids" in receivers) {
+            payload["device_ids"] <- receivers.device_ids;
+        }
+
+        if (contentType != null) {
+            payload["content-type"] <- contentType;
+        }
+
+        _requestWithRetry("post", _pubSubEndpoints[action] + relativeUrl, _headers, http.jsonencode(payload), cb);
+    }
+
+
+    // 
+    // Processes a chunk of data received via poll
+    // @param  {String}   chunks String chunk of data recieved from polling request
+    // @param  {Function} cb     callback to call if a full message was found within chunk
+    // 
+    function _processData(chunks, cb) {
+        local response = _decode(chunks);
+        imp.wakeup(0, function() {
+            cb(response);
+        }.bindenv(this));
+        return;
+    }
+
+
+    // 
+    // Takes an encoded msg which contains headers and content and decodes it
+    // @param  {String}  encodedMsg http encoded message
+    // @return {Table}   decoded Table with keys headers and body
+    // 
+    function _decode(encodedMsg) {
+        local decoded = {};
+        local headerEnd = encodedMsg.find("\n\n");
+        local encodedHeader = encodedMsg.slice(0, headerEnd);
+        local encodedBody = encodedMsg.slice(headerEnd + "\n\n".len());
+        decoded.headers <- _parseHeaders(encodedHeader);
+        decoded.body <- _parseBody(encodedBody, decoded.headers);
+        return decoded;
+    }
+
+
+    // 
+    // Takes a http encoded string of header key value pairs and converts to a table of
+    // @param  {String} encodedHeader http encoded string of header key value pairs
+    // @return {Table}  Table of header key value pairs 
+    // 
+    function _parseHeaders(encodedHeader) {
+        local headerArr = split(encodedHeader, "\n");
+        local headers = {}
+        foreach (i, header in headerArr) {
+            local keyValArr = split(header, ":");
+            keyValArr[0] = strip(keyValArr[0]);
+            if (keyValArr[0].len() > 0) {
+                headers[keyValArr[0].tolower()] <- strip(keyValArr[1]);
+            }
+        }
+        return headers;
+    }
+
+
+    // 
+    // Takes a http encoded string of the message body and a list of headers and parses the body based on Content-Type header.
+    // @param  {String}   encodedBody http encoded string of header key value pairs
+    // @param  {String}   encodedBody http encoded string of header key value pairs
+    // @return {Table}    Table of header key value pairs 
+    // 
+    function _parseBody(encodedBody, headers) {
+
+        local body = encodedBody;
+        if ("content-type" in headers && headers["content-type"] == "application/json") {
+            try {
+                body = http.jsondecode(encodedBody);
+            } catch (e) {
+                server.error(e)
+            }
+        }
+        return body;
+    }
+
 
     // 
     // Posts a sendData payload to conctrs ingestion engine
@@ -304,7 +619,7 @@ class Conctr {
 
         // Reject invalid methods
         if (["GET", "POST"].find(method) == null) {
-            throw "Invalid method, must be either POST or GET";
+            throw "Conctr: Invalid method, must be either POST or GET";
         }
 
         local req = http.request(method, url, headers, payload);
@@ -451,7 +766,7 @@ class Conctr {
     function _formDataEndpointUrl() {
 
         // This is the temporary value of the data endpoint.
-        return format("https://api.%s.conctr.com/data/apps/%s/devices/%s", _env, _app_id, _device_id);
+        return (_LOCAL_MODE == true) ? format("http://%s.ngrok.io/data/apps/%s/devices/%s", _ngrokID, _app_id, _device_id) : format("https://api.%s.conctr.com/data/apps/%s/devices/%s", _env, _app_id, _device_id);
 
         // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
         // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
@@ -475,27 +790,50 @@ class Conctr {
         // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
         // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s/claim", region, env, appId, deviceId);
     }
+
+
+
+
+
+    // 
+    // Forms and returns the insert data API endpoint for the current device and Conctr application
+    // 
+    // @param  {String} appId
+    // @param  {String} deviceId
+    // @param  {String} region
+    // @param  {String} env
+    // @return {String} url endpoint that will accept the data payload
+    // 
+    function _formPubSubEndpointUrls(appId, deviceId, region, env) {
+
+        local pubSubActions = ["subscribe", "publish"];
+        local endpoints = {};
+        foreach (idx, action in pubSubActions) {
+            if (!_LOCAL_MODE) {
+                endpoints[action] <- format("https://api.%s.conctr.com/%s/%s/%s", env, _protocol, appId, action);
+            } else {
+                server.log("CONCTR: Warning using localmode");
+                endpoints[action] <- format("http://%s.ngrok.io/%s/%s/%s", _ngrokID, _protocol, appId, action);
+            }
+            // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
+            // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
+        }
+        return endpoints;
+    }
+
+
+    function _useLocalmode(ngrokid) {
+        _ngrokID = ngrokid;
+        _LOCAL_MODE = true;
+        _formPubSubEndpointUrls(_app_id, _device_id, _region, _env);
+    }
 }
 
 
+APP_ID <- "40c91df1b9f24faabfacd5bccd1c4a43";
+API_KEY <- "fca8f769-c223-4d9f-8681-ef6715a7c227";
+MODEL <- "test_model:v1";
 
-APP_ID <- "ENTER_YOUR_APP_ID_HERE";
-API_KEY <- "ENTER_YOUR_API_KEY_HERE";
-MODEL <- "ENTER_YOUR_MODEL_HERE";
-
-// mmOpts <- {
-//     "retryInterval": 15,
-//     "messageTimeout": 20,
-//     "autoRetry": true,
-//     "maxAutoRetries": 10,
-// };
-
-// mm <- MessageManager(mmOpts);
-// rocky <- Rocky()
-
-conctrOpts <- {
-    // "messageManager": mm,
-    // "rocky": rocky
-}
+conctrOpts <- {}
 
 conctr <- Conctr(APP_ID, API_KEY, MODEL, conctrOpts);
