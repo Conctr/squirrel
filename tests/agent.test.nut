@@ -60,6 +60,36 @@ class AgentTestCase extends ImpTestCase {
     }
 
 
+    // test the sendData function sent correctly checks for a http created response
+    function testSendArrayData() {
+        return Promise(function(resolve, reject) {
+            // Ensure this payload matches your model
+            local payload = [{
+                            "temperature": 15,
+                            "humidity": 80,
+                        },{
+                            "temperature": 25,
+                            "humidity": 70,
+                        }]
+
+            // Send the payload
+            conctr.sendData(payload, function(err, resp) {
+                if (err) reject(err);
+
+                // assert the data was accepted
+                try {
+                    this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                }
+
+            }.bindenv(this))
+
+        }.bindenv(this))
+    }
+
+
 
     // test the sendData function where the payload contains fields not in
     // the conctr model
@@ -151,7 +181,7 @@ class AgentTestCase extends ImpTestCase {
                 resolve()
             }.bindenv(this))
 
-            imp.wakeup(5, function() {
+            imp.wakeup(10, function() {
                 server.log("Publishing")
                 conctr.publish("test_topic", msg, function(err, resp) {
                     if (err) reject(err);

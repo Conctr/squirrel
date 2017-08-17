@@ -70,6 +70,42 @@ class DeviceTestCase extends ImpTestCase {
     }
 
 
+    // tests the send Data function, checks that a 201 response was received
+    function testSendArrayData() {
+        return Promise(function(resolve, reject) {
+            // Ensure this payload matches your model
+            local payload = [{
+                            "temperature": 15,
+                            "humidity": 80,
+                        },{
+                            "temperature": 25,
+                            "humidity": 70,
+                        }]
+
+            // Send the payload
+            conctr.sendData(payload, function(err, resp) {
+                if (err) reject(err);
+                // Check if sender has reply capability
+                try {
+                    if ("onReply" in conctr._sender) {
+                        // assert the data was accepted
+                        this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
+                    } else {
+                        server.log(resp)
+                        // response will be 0 as there is no messageManager to get a response from
+                        this.assertTrue(resp == 0);
+                    }
+                    resolve();
+                } catch(error) {
+                    reject(error);
+                }
+
+            }.bindenv(this))
+        }.bindenv(this))
+    }
+
+
+
 
     // tests the sending an invalid datatype via the sendData function,
     // checks that correct error message is thrown
