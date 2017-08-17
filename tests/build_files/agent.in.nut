@@ -830,9 +830,9 @@ class Conctr {
 }
 
 
-APP_ID <- "40c91df1b9f24faabfacd5bccd1c4a43";
-API_KEY <- "fca8f769-c223-4d9f-8681-ef6715a7c227";
-MODEL <- "test_model:v1";
+APP_ID <- "Enter your application id";
+API_KEY <- "Enter your api key";
+MODEL <- "Enter your model";
 
 conctrOpts <- {}
 
