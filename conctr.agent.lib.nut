@@ -318,38 +318,6 @@ class Conctr {
         local contentLength = null;
         local reqTime = time();
 
-        // http done callback
-        local _doneCb = function(resp) {
-
-            // We dont allow non chunked requests. So if we recieve a message in this func
-            // it is the last message of the steam and may contain the last chunk
-            if (resp.body == null || resp.body == "") {
-                _streamCb(resp.body);
-            }
-
-            local wakeupTime = 0;
-            local reconnect = function() {
-                subscribe(topics, cb);
-            }
-
-            if (resp.statuscode >= 200 && resp.statuscode <= 300) {
-                // wake up time is 0
-            } else if (resp.statuscode == 429) {
-                wakeupTime = 1;
-            } else if (resp.statuscode == 401) {
-                throw "Conctr: Authentication failed";
-            } else {
-                local conTime = time() - reqTime;
-                if (conTime < MIN_RECONNECT_TIME) {
-                    wakeupTime = MIN_RECONNECT_TIME - conTime;
-                }
-                server.error("Conctr: Subscribe failed with error code " + resp.statuscode + ". Retrying in " + wakeupTime + " seconds");
-            }
-
-            // Reconnect in a bit or now based on disconnection reason
-            imp.wakeup(wakeupTime, reconnect.bindenv(this));
-        };
-
         // Http streaming callback
         local _streamCb = function(chunk) {
 
@@ -388,6 +356,39 @@ class Conctr {
                 contentLength = null;
             }
         }
+
+
+        // http done callback
+        local _doneCb = function(resp) {
+
+            // We dont allow non chunked requests. So if we recieve a message in this func
+            // it is the last message of the steam and may contain the last chunk
+            if (resp.body == null || resp.body == "") {
+                _streamCb(resp.body);
+            }
+
+            local wakeupTime = 0;
+            local reconnect = function() {
+                subscribe(topics, cb);
+            }
+
+            if (resp.statuscode >= 200 && resp.statuscode <= 300) {
+                // wake up time is 0
+            } else if (resp.statuscode == 429) {
+                wakeupTime = 1;
+            } else if (resp.statuscode == 401) {
+                throw "Conctr: Authentication failed";
+            } else {
+                local conTime = time() - reqTime;
+                if (conTime < MIN_RECONNECT_TIME) {
+                    wakeupTime = MIN_RECONNECT_TIME - conTime;
+                }
+                server.error("Conctr: Subscribe failed with error code " + resp.statuscode + ". Retrying in " + wakeupTime + " seconds");
+            }
+
+            // Reconnect in a bit or now based on disconnection reason
+            imp.wakeup(wakeupTime, reconnect.bindenv(this));
+        };
 
         headers["Content-Type"] <- "application/json";
         headers["Connection"] <- "keep-alive";
