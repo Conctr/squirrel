@@ -28,7 +28,7 @@ const CONCTR_TEST_HTTP_UNAUTHORIZED = 401;
 const CONCTR_TEST_DATA_INVALID_DATA_TYPE = "STRING";
 
 // error messages
-const CONCTR_ERROR_MESSAGE_INVALID_DATA = "Conctr: Payload must contain a table or an array of tables"
+const CONCTR_ERROR_MESSAGE_INVALID_DATA = "Conctr: Payload must contain a table or an array of tables";
 
 class DeviceTestCase extends ImpTestCase {
 

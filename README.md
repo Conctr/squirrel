@@ -27,7 +27,7 @@ The constructor takes three required parameters: *appId, apiKey* and *model*. Th
 | *options.useAgentId*      | Boolean   | No       | `false`       | Boolean flag used to determine whether to use the imp agent ID instead of the device ID as the primary identifier to Conctr for the data sent. See *setDeviceId()* to set a custom ID |
 | *options.region*          | String    | No       | `"us-west-2"` |  Region of the instance to use. Currently only `"us-west-2"` is supported |
 | *options.environment*     | String    | No       | `"staging"`   | Conctr environment to send data to |
-| *options.protocol*     | `conctr.MQTT` or `conctr.AMQP`    | No       | `conctr.MQTT`   | Protocol to use to send message NOTE: Currently only MQTT is supported. |
+| *options.protocol*     | `conctr.MQTT`| No       | `conctr.MQTT`   | Protocol to use to send message NOTE: Currently only MQTT is supported. |
 | *options.rocky*           | Object    | No       | `null`        | An instantiated [Rocky](https://electricimp.com/docs/libraries/utilities/rocky/) object to be used for accepting claim requests via HTTPS |
 | *options.messageManager*  | Object    | No       | `null`        | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) or [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object to be used for guaranteeing message delivery from the device to the agent |
 
@@ -143,7 +143,7 @@ The callback will be called with the following arguments:
 
 
 ### publishToDevice(*deviceIds, msg [, contentType] [, cb]*)
-Publishes a message to a specific topic.
+Publishes a message to a specific device.
 
 | Key             | Data Type | Required  | Description |
 | --------------- | --------- | -------- | ----------- |

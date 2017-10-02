@@ -233,7 +233,7 @@ class Conctr {
     // @return  {String}    current protocal after change
     // 
     function setProtocol(protocol) {
-        if (protocol == AMQP || protocol == MQTT) {
+        if (protocol == MQTT) {
             _protocol = protocol;
         } else {
             server.error(protocol + " is not a valid protocol.");
@@ -265,7 +265,7 @@ class Conctr {
     // @param  {Function}       cb          Function called on completion of publish request
     // 
     function publish(topics, msg, contentType = null, cb = null) {
-        local relativeUrl = ""
+        local relativeUrl = "";
         _publish(relativeUrl, { "topics": topics }, msg, contentType, cb);
 
     }
@@ -287,8 +287,8 @@ class Conctr {
     // 
     // Subscribe to a single/list of topics
     // 
-    // @param  {Function}       cb     Function called on receipt of data
     // @param  {Array/String}   topics String or Array of string topic names to subscribe to
+    // @param  {Function}       cb     Function called on receipt of data
     // 
     function subscribe(topics = [], cb = null) {
 
@@ -323,7 +323,7 @@ class Conctr {
 
             // We dont allow non chunked requests. So if we recieve a message in this func
             // it is the last message of the steam and may contain the last chunk
-            if (resp.body == null && resp.body == "") {
+            if (resp.body == null || resp.body == "") {
                 _streamCb(resp.body);
             }
 
@@ -392,7 +392,7 @@ class Conctr {
         headers["Content-Type"] <- "application/json";
         headers["Connection"] <- "keep-alive";
         headers["Transfer-encoding"] <- "chunked";
-        headers["Authorization"] <- _headers["Authorization"]
+        headers["Authorization"] <- _headers["Authorization"];
         payload["topics"] <- topics;
 
         // Check there isnt a current connection, close it if there is.
@@ -471,6 +471,7 @@ class Conctr {
         local decoded = {};
         local headerEnd = encodedMsg.find("\n\n");
         local encodedHeader = encodedMsg.slice(0, headerEnd);
+        // get index of header end plus the two new line chars
         local encodedBody = encodedMsg.slice(headerEnd + "\n\n".len());
         decoded.headers <- _parseHeaders(encodedHeader);
         decoded.body <- _parseBody(encodedBody, decoded.headers);

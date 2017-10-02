@@ -40,7 +40,7 @@ class AgentTestCase extends ImpTestCase {
             local payload = {
                 "temperature": 15,
                 "humidity": 80,
-            }
+            };
 
             // Send the payload
             conctr.sendData(payload, function(err, resp) {
@@ -70,7 +70,7 @@ class AgentTestCase extends ImpTestCase {
                         },{
                             "temperature": 25,
                             "humidity": 70,
-                        }]
+                        }];
 
             // Send the payload
             conctr.sendData(payload, function(err, resp) {
@@ -99,7 +99,8 @@ class AgentTestCase extends ImpTestCase {
             // Ensure this payload matches your model
             local payload = {
                     "FIELD_NOT_IN_MODEL": 15,
-                }
+                };
+
                 // Send the payload
             conctr.sendData(payload, function(err, resp) {
                 // assert the data was not accepted
@@ -109,7 +110,6 @@ class AgentTestCase extends ImpTestCase {
                 } catch (error) {
                     reject(error);
                 }
-
             }.bindenv(this))
         }.bindenv(this))
     }
@@ -145,11 +145,11 @@ class AgentTestCase extends ImpTestCase {
     function testPublishToDevice() {
         return Promise(function(resolve, reject) {
             // Ensure this payload matches your model
-            local msg = "hello world"
+            local msg = "hello world";
 
             conctr.publishToDevice(conctr._device_id, msg, function(err, resp) {
                 if (err) reject(err);
-                resolve()
+                resolve();
             });
         }.bindenv(this))
     }
@@ -157,11 +157,11 @@ class AgentTestCase extends ImpTestCase {
     function testPublish() {
         return Promise(function(resolve, reject) {
             // Ensure this payload matches your model
-            local msg = "hello world"
+            local msg = "hello world";
 
             conctr.publish("test_topic", msg, function(err, resp) {
                 if (err) reject(err);
-                resolve()
+                resolve();
             });
 
         }.bindenv(this))
@@ -172,17 +172,17 @@ class AgentTestCase extends ImpTestCase {
         return Promise(function(resolve, reject) {
             
             // Message to publih
-            local msg = "hello world"
+            local msg = "hello world";
             
             conctr.subscribe("test_topic",function(resp) {
                 local received = resp.body;
                 // Ensure that the device ids do not already match
                 this.assertTrue(received == msg);
-                resolve()
+                resolve();
             }.bindenv(this))
 
             imp.wakeup(10, function() {
-                server.log("Publishing")
+                this.info("Published a message")
                 conctr.publish("test_topic", msg, function(err, resp) {
                     if (err) reject(err);
                 });
