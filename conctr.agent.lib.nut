@@ -357,13 +357,12 @@ class Conctr {
             }
         }
 
-
         // http done callback
         local _doneCb = function(resp) {
 
             // We dont allow non chunked requests. So if we recieve a message in this func
             // it is the last message of the steam and may contain the last chunk
-            if (resp.body == null || resp.body == "") {
+            if (!(resp.body == null || resp.body == "")) {
                 _streamCb(resp.body);
             }
 
@@ -412,6 +411,60 @@ class Conctr {
     function unsubscribe() {
         if (_pollingReq) _pollingReq.cancel();
         _pollingReq = null;
+    }
+
+
+    // 
+    // Http GET request with conctr auth injected in automatically
+    // 
+    // @param  {String}   url       Url to hit
+    // @param  {Table}    payload   Payload to send
+    // @param  {Table}   headers    Additional headers pass
+    // @param  {Function} cb        cb called with result
+    // 
+    function get(url, payload, headers = {}, cb = null) {
+        if (typeof headers == "function") {
+            cb = headers;
+            headers = {};
+        }
+
+        if (typeof payload != "string") {
+            payload = http.jsonencode(payload);
+        }
+
+        headers["Authorization"] <- _headers["Authorization"];
+
+        _requestWithRetry("GET", url, headers, payload, function(err, resp) {
+            if (err) cb(err);
+            else cb(resp);
+        }.bindenv(this));
+    }
+
+
+    // 
+    // Http POST request with conctr auth injected in automatically
+    // 
+    // @param  {String}   url       Url to hit
+    // @param  {Table}    payload   Payload to send
+    // @param  {Table}   headers    Additional headers pass
+    // @param  {Function} cb        cb called with result
+    // 
+    function post(url, payload, headers = {}, cb = null) {
+        if (typeof headers == "function") {
+            cb = headers;
+            headers = {};
+        }
+
+        if (typeof payload != "string") {
+            payload = http.jsonencode(payload);
+        }
+
+        headers["Authorization"] <- _headers["Authorization"];
+
+        _requestWithRetry("POST", url, headers, payload, function(err, resp) {
+            if (err) cb(err);
+            else cb(resp);
+        }.bindenv(this));
     }
 
 
