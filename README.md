@@ -223,6 +223,73 @@ conctr.subscribe()
 ```
 
 
+### get(*(url [, headers] [, cb]*)
+Performs a GET request to Conctr with authentication headers automatically added. 
+
+| Key             | Data Type | Required  | Description |
+| --------------- | --------- | -------- | ----------- |
+| *url*  | String   | Yes | Url to perform GET request on |
+| *headers*  | Table  | No  |Additional header to send|
+| *cb*  | Function   | No       | Function called on completion of publish request. |
+
+#### Example
+
+```squirrel
+local url = "https://api.staging.conctr.com/status";
+
+// get a status request of Conctr
+conctr.get(url, function(err ,resp){
+
+    if(err) server.error("Error"+err);
+    else server.log("Successfully got response");
+
+}.bindenv(this));
+```
+
+The callback will be called with the following arguments:
+
+| Callback Parameter | Data Type | Description |
+| ------------------ | --------- | ----------- |
+| *error* | String | An error message if there was a problem, or null if successful |
+| *resp* | Table | Http response |
+
+### post(*(url, payload, [, headers] [, cb]*)
+Performs a POST request to Conctr with authentication headers automatically added. 
+
+| Key             | Data Type | Required  | Description |
+| --------------- | --------- | -------- | ----------- |
+| *url*         | String    | Yes | Url to perform POST request on |
+| *payload*     | Any       | Yes | Body of POST request |
+| *headers*     | Table     | No  |Additional header to send|
+| *cb*          | Function  | No  | Function called on completion of publish request. |
+
+#### Example
+
+```squirrel
+local url="https://api.staging.conctr.com/admin/apps/asd8f8a9niks7sd7ds8dsd87/appendLog";
+
+local payload = {
+    "msg": "Hello World!"
+}
+
+// append a log to application logs
+conctr.post(url, payload, function(err ,resp){
+
+    if(err) server.error("Error"+err);
+    else server.log("Successfully appended log");
+
+}.bindenv(this));
+```
+
+The callback will be called with the following arguments:
+
+| Callback Parameter | Data Type | Description |
+| ------------------ | --------- | ----------- |
+| *error* | String | An error message if there was a problem, or null if successful |
+| *resp* | Table | Http response |
+
+
+
 ## Device Class Usage
 **NOTE:** The device class is optional. It provides utility functions for interfacing with the agent class like automating the location sending process and provide queueing and error handling for sending data to Conctr.
 ### Constructor: Conctr(*[options]*)

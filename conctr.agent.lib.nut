@@ -318,6 +318,7 @@ class Conctr {
         local contentLength = null;
         local reqTime = time();
 
+
         // Http streaming callback
         local _streamCb = function(chunk) {
 
@@ -345,6 +346,12 @@ class Conctr {
                     // Leave the rest of the msg
                     chunks = chunks.slice(eos + STREAM_TERMINATOR.len());
                 }
+            }
+
+            // Handle incorrect message i.e. 502 html returned
+            if(typeof contentLength == "string"){
+                server.error("Got invalid response from conctr: "+chunks)
+                return subscribe(topics,cb);
             }
 
             if (contentLength != null && chunks.len() >= contentLength) {
@@ -417,26 +424,21 @@ class Conctr {
     // 
     // Http GET request with conctr auth injected in automatically
     // 
-    // @param  {String}   url       Url to hit
-    // @param  {Table}    payload   Payload to send
-    // @param  {Table}   headers    Additional headers pass
-    // @param  {Function} cb        cb called with result
+    // @param  {String}     url       Url to hit
+    // @param  {Table}      headers   Additional headers pass
+    // @param  {Function}   cb        cb called with result
     // 
-    function get(url, payload, headers = {}, cb = null) {
+    function get(url, headers = {}, cb = null) {
         if (typeof headers == "function") {
             cb = headers;
             headers = {};
         }
 
-        if (typeof payload != "string") {
-            payload = http.jsonencode(payload);
-        }
-
         headers["Authorization"] <- _headers["Authorization"];
 
-        _requestWithRetry("GET", url, headers, payload, function(err, resp) {
-            if (err) cb(err);
-            else cb(resp);
+        _requestWithRetry("GET", url, headers, "", function(err, resp) {
+            if (err) cb(err,null);
+            else cb(null, resp);
         }.bindenv(this));
     }
 
@@ -444,10 +446,10 @@ class Conctr {
     // 
     // Http POST request with conctr auth injected in automatically
     // 
-    // @param  {String}   url       Url to hit
-    // @param  {Table}    payload   Payload to send
-    // @param  {Table}   headers    Additional headers pass
-    // @param  {Function} cb        cb called with result
+    // @param  {String}     url       Url to hit
+    // @param  {Table}      payload   Payload to send
+    // @param  {Table}      headers   Additional headers pass
+    // @param  {Function}   cb        cb called with result
     // 
     function post(url, payload, headers = {}, cb = null) {
         if (typeof headers == "function") {
@@ -839,8 +841,6 @@ class Conctr {
         // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
         // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s/claim", region, env, appId, deviceId);
     }
-
-
 
 
 
