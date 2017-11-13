@@ -30,6 +30,7 @@ class Conctr {
     static SOURCE_AGENT = "impagent";
     static MIN_TIME = 946684801; // Epoch timestamp for 00:01 AM 01/01/2000 (used for timestamp sanity check)
     static MIN_RECONNECT_TIME = 5;
+    static CONN_TIMEOUT=3590;
 
     // Request opt defaults
     static MAX_RETIES_DEFAULT = 3;
@@ -51,6 +52,7 @@ class Conctr {
     _pendingReqs = null;
     _pendingTimer = null;
     _pollingReq = null;
+    _wakeAndSubTimer = null;
 
     // Pub/sub endpoints
     _pubSubEndpoints = null;
@@ -404,6 +406,11 @@ class Conctr {
 
         // Check there isnt a current connection, close it if there is.
         if (_pollingReq) _pollingReq.cancel();
+        if(_wakeAndSubTimer) imp.cancelwakeup(_wakeAndSubTimer);
+
+        _wakeAndSubTimer = imp.wakeup(CONN_TIMEOUT, function(){
+                subscribe(topics,cb);
+            }.bindenv(this))
 
         _pollingReq = http.post(_pubSubEndpoints[action], headers, http.jsonencode(payload));
 
@@ -417,6 +424,7 @@ class Conctr {
     // 
     function unsubscribe() {
         if (_pollingReq) _pollingReq.cancel();
+        if(_wakeAndSubTimer) imp.cancelwakeup(_wakeAndSubTimer);
         _pollingReq = null;
     }
 
