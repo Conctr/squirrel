@@ -319,6 +319,10 @@ class Conctr {
         local chunks = "";
         local contentLength = null;
         local reqTime = time();
+        local reconnect = function() {
+                server.log("reconnecting")
+                subscribe(topics, cb);
+            }
 
 
         // Http streaming callback
@@ -376,9 +380,6 @@ class Conctr {
             }
 
             local wakeupTime = 0;
-            local reconnect = function() {
-                subscribe(topics, cb);
-            }
 
             if (resp.statuscode >= 200 && resp.statuscode <= 300) {
                 // wake up time is 0
@@ -408,9 +409,7 @@ class Conctr {
         if (_pollingReq) _pollingReq.cancel();
         if(_wakeAndSubTimer) imp.cancelwakeup(_wakeAndSubTimer);
 
-        _wakeAndSubTimer = imp.wakeup(CONN_TIMEOUT, function(){
-                subscribe(topics,cb);
-            }.bindenv(this))
+        _wakeAndSubTimer = imp.wakeup(CONN_TIMEOUT, reconnect.bindenv(this))
 
         _pollingReq = http.post(_pubSubEndpoints[action], headers, http.jsonencode(payload));
 
