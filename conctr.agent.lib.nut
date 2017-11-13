@@ -320,7 +320,6 @@ class Conctr {
         local contentLength = null;
         local reqTime = time();
         local reconnect = function() {
-                server.log("reconnecting")
                 subscribe(topics, cb);
             }
 
