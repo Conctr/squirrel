@@ -68,7 +68,7 @@ class Conctr {
     _rocky = null; // rocky library object
     _sender = null; // messaging object
     _location = null; // the last known location
-
+    
     // Pending queue status
     _pendingReqs = null; // pending a request 
     _pendingTimer = null; // timer for pending a request
@@ -252,7 +252,7 @@ class Conctr {
     // 
     function sendLocation(sendToConctr = true) {
 
-        if (DEBUG) server.log("Conctr: requesting location be sent to " + (sendToConctr ? "conctr" : "agent"));
+        if (DEBUG) log("Conctr: requesting location be sent to " + (sendToConctr ? "conctr" : "agent"));
         _sender.send(LOCATION_REQ_EVENT, sendToConctr);
 
     }
@@ -345,7 +345,7 @@ class Conctr {
                     try {
                         contentLength = contentLength.tointeger();
                     } catch (e) {
-                        server.error(e);
+                        // server.error("Conctr: " + e);
                     }
 
                     // Leave the rest of the msg
@@ -354,8 +354,8 @@ class Conctr {
             }
 
             // Handle incorrect message i.e. 502 html returned
-            if(typeof contentLength == "string"){
-                server.error("Got invalid response from conctr: "+chunks)
+            if (typeof contentLength == "string") {
+                // server.error("Conctr: Got invalid response: " + chunks)
                 return reconnect();
             }
 
@@ -379,12 +379,15 @@ class Conctr {
             }
 
             local wakeupTime = 0;
-
+            
             if (resp.statuscode >= 200 && resp.statuscode <= 300) {
                 // wake up time is 0
             } else if (resp.statuscode == 429) {
                 wakeupTime = 1;
-            } else if (resp.statuscode == 401) {
+            } else if(resp.statuscode == 409){
+                server.log("Blowing zombie agents brains out!");
+                return;
+            }else if (resp.statuscode == 401) {
                 throw "Conctr: Authentication failed";
             } else {
                 local conTime = time() - reqTime;
@@ -393,9 +396,11 @@ class Conctr {
                 }
                 server.error("Conctr: Subscribe failed with error code " + resp.statuscode + ". Retrying in " + wakeupTime + " seconds");
             }
-
+            
+            
             // Reconnect in a bit or now based on disconnection reason
             imp.wakeup(wakeupTime, reconnect.bindenv(this));
+            
         };
 
         headers["Content-Type"] <- "application/json";
@@ -403,6 +408,7 @@ class Conctr {
         headers["Transfer-encoding"] <- "chunked";
         headers["Authorization"] <- _headers["Authorization"];
         payload["topics"] <- topics;
+        payload["clientId"] <- _device_id;
         
         local _oldReq = null;
         
@@ -477,6 +483,16 @@ class Conctr {
         _requestWithRetry("POST", url, headers, payload, function(err, resp) {
             if (err) cb(err);
             else cb(resp);
+        }.bindenv(this));
+    }
+
+    function log(msg){
+        server.log(msg);
+        local url = format("https://api.%s.conctr.com/admin/apps/%s/appendLog", _env, _app_id);
+        local payload = {"msg":msg}
+
+        post(url,payload,_headers,function(resp){
+
         }.bindenv(this));
     }
 
@@ -623,7 +639,7 @@ class Conctr {
                 // Create a new pending queue or append to an existing one
                 if (_pendingReqs == null) {
                     _pendingReqs = { "payloads": [], "callbacks": [] };
-                    if (DEBUG) server.log("Conctr: Starting to queue data in batch");
+                    if (DEBUG) log("Conctr: Starting to queue data in batch");
                 }
                 _pendingReqs.payloads.extend(payload);
                 _pendingReqs.callbacks.push(cb);
@@ -632,7 +648,7 @@ class Conctr {
                 // Don't pass if there is another timer running
                 if (_pendingTimer != null) return;
                 _pendingTimer = imp.wakeup(1, function() {
-                    if (DEBUG) server.log("Conctr: Sending queued data in batch");
+                    if (DEBUG) log("Conctr: Sending queued data in batch");
                     // backup and release the pending queue before retrying to post it
                     _pendingTimer = null;
                     local pendingReqs = _pendingReqs;
@@ -769,10 +785,10 @@ class Conctr {
                 _location = msg._location;
                 if ("sendToConctr" in msg && msg.sendToConctr == true) {
                     // And send it to Conctr
-                    if (DEBUG) server.log("Conctr: sending location to conctr");
+                    if (DEBUG) log("Conctr: sending location to conctr");
                     sendData({});
                 } else {
-                    if (DEBUG) server.log("Conctr: cached location in agent");
+                    if (DEBUG) log("Conctr: cached location in agent");
                 }
             }
 
@@ -787,7 +803,7 @@ class Conctr {
     // @param  {Object} rocky Instantiated instance of the Rocky class
     // 
     function _setupAgentApi(rocky) {
-        if (DEBUG) server.log("Conctr: Set up agent endpoints");
+        if (DEBUG) log("Conctr: Set up agent endpoints");
         rocky.post("/conctr/claim", _handleClaimReq.bindenv(this));
     }
 
@@ -809,7 +825,7 @@ class Conctr {
             if (err != null) {
                 return context.send(400, { "error": err });
             }
-            if (DEBUG) server.log("Conctr: Device claimed");
+            if (DEBUG) log("Conctr: Device claimed");
             return context.send(200, resp);
         }.bindenv(this));
 
@@ -872,7 +888,7 @@ class Conctr {
             if (!_LOCAL_MODE) {
                 endpoints[action] <- format("https://api.%s.conctr.com/%s/%s/%s", env, _protocol, appId, action);
             } else {
-                server.log("CONCTR: Warning using localmode");
+                log("CONCTR: Warning using localmode");
                 endpoints[action] <- format("http://%s.ngrok.io/%s/%s/%s", _ngrokID, _protocol, appId, action);
             }
             // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
