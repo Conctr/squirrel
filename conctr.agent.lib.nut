@@ -30,7 +30,7 @@ class Conctr {
     static SOURCE_AGENT = "impagent";
     static MIN_TIME = 946684801; // Epoch timestamp for 00:01 AM 01/01/2000 (used for timestamp sanity check)
     static MIN_RECONNECT_TIME = 5;
-    static CONN_TIMEOUT=3590;
+    static CONN_TIMEOUT=580;
 
     // Request opt defaults
     static MAX_RETIES_DEFAULT = 3;
@@ -293,7 +293,7 @@ class Conctr {
     // @param  {Function}       cb     Function called on receipt of data
     // 
     function subscribe(topics = [], cb = null) {
-
+        
         // Check if only callback is subscribed to
         if (typeof topics == "function") {
             cb = topics;
@@ -356,7 +356,7 @@ class Conctr {
             // Handle incorrect message i.e. 502 html returned
             if(typeof contentLength == "string"){
                 server.error("Got invalid response from conctr: "+chunks)
-                return subscribe(topics,cb);
+                return reconnect();
             }
 
             if (contentLength != null && chunks.len() >= contentLength) {
@@ -371,11 +371,11 @@ class Conctr {
 
         // http done callback
         local _doneCb = function(resp) {
-
+            
             // We dont allow non chunked requests. So if we recieve a message in this func
             // it is the last message of the steam and may contain the last chunk
-            if (!(resp.body == null || resp.body == "")) {
-                _streamCb(resp.body);
+            if ("body" in resp && !(resp.body == null || resp.body == "")) {
+                _streamCb(resp);
             }
 
             local wakeupTime = 0;
@@ -403,17 +403,22 @@ class Conctr {
         headers["Transfer-encoding"] <- "chunked";
         headers["Authorization"] <- _headers["Authorization"];
         payload["topics"] <- topics;
-
-        // Check there isnt a current connection, close it if there is.
-        if (_pollingReq) _pollingReq.cancel();
+        
+        local _oldReq = null;
+        
+        // Check there isnt a current connection, if there is keep a copy
+        if (_pollingReq) _oldReq = _pollingReq;
         if(_wakeAndSubTimer) imp.cancelwakeup(_wakeAndSubTimer);
-
+        
         _wakeAndSubTimer = imp.wakeup(CONN_TIMEOUT, reconnect.bindenv(this))
 
         _pollingReq = http.post(_pubSubEndpoints[action], headers, http.jsonencode(payload));
 
         // Call callback directly when not chucked response, handle chuncking in second arg to sendAsync
-        _pollingReq.sendasync(_doneCb.bindenv(this), _streamCb.bindenv(this));
+        _pollingReq.sendasync(_doneCb.bindenv(this), _streamCb.bindenv(this), CONN_TIMEOUT+10);
+        
+        // new req made, cancel old req
+        if(_oldReq) _oldReq.cancel();
     }
 
 
