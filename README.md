@@ -224,7 +224,7 @@ conctr.subscribe()
 ```
 
 
-### get(*(url [, headers] [, cb]*)
+### get(*url [, headers] [, cb]*)
 Performs a GET request to Conctr with authentication headers automatically added. 
 
 | Key             | Data Type | Required  | Description |
@@ -254,7 +254,7 @@ The callback will be called with the following arguments:
 | *error* | String | An error message if there was a problem, or null if successful |
 | *resp* | Table | Http response |
 
-### post(*(url, payload, [, headers] [, cb]*)
+### post(*url, payload, [, headers] [, cb]*)
 Performs a POST request to Conctr with authentication headers automatically added. 
 
 | Key             | Data Type | Required  | Description |
@@ -267,6 +267,8 @@ Performs a POST request to Conctr with authentication headers automatically adde
 #### Example
 
 ```squirrel
+// Example showing manual request to post a log to a Conctr application. Use log function below instead of manual implementation.
+
 local url="https://api.staging.conctr.com/admin/apps/asd8f8a9niks7sd7ds8dsd87/appendLog";
 
 local payload = {
@@ -280,6 +282,31 @@ conctr.post(url, payload, function(err ,resp){
     else server.log("Successfully appended log");
 
 }.bindenv(this));
+```
+
+The callback will be called with the following arguments:
+
+| Callback Parameter | Data Type | Description |
+| ------------------ | --------- | ----------- |
+| *error* | String | An error message if there was a problem, or null if successful |
+| *resp* | Table | Http response |
+
+### log(*msg*)
+Log a message to application in Conctr. Will also output log to server.log. 
+NOTE: Non string type messages will be JSON encoded before sending to Conctr.
+
+| Key             | Data Type | Required  | Description |
+| --------------- | --------- | -------- | ----------- |
+| *msg*           | String    | Yes | Message to log to application|
+
+#### Example
+
+```squirrel
+
+local log = "I am an important log message";
+
+// append a log to application logs
+conctr.log(log);
 ```
 
 The callback will be called with the following arguments:

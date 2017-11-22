@@ -486,17 +486,31 @@ class Conctr {
         }.bindenv(this));
     }
 
+    /**
+     * Logs to conctr logs and also to server.log
+     * 
+     * @param  {String} msg Message to store. If type is not string it will be json encoded.
+     */
     function log(msg){
+
+        if (typeof msg != "string") {
+            try {
+                msg = http.jsonencode(msg);
+            } catch (e) {
+                server.error("Conctr: "+e);
+                return;
+            }
+        }
+
         server.log(msg);
+
         local url = format("https://api.%s.conctr.com/admin/apps/%s/appendLog", _env, _app_id);
         local payload = {"msg":msg}
 
         post(url,payload,_headers,function(resp){
-
             if(DEBUG) server.log("Log append statuscode: "+resp.statuscode);
         }.bindenv(this));
     }
-
 
 
     // 
