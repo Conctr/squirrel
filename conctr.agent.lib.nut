@@ -384,7 +384,7 @@ class Conctr {
                 // wake up time is 0
             } else if (resp.statuscode == 429) {
                 wakeupTime = 1;
-            } else if(resp.statuscode == 409){
+            } else if(resp.statuscode == 599){
                 server.log("Blowing zombie agents brains out!");
                 return;
             }else if (resp.statuscode == 401) {

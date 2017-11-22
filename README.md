@@ -140,6 +140,7 @@ The callback will be called with the following arguments:
 | Callback Parameter | Data Type | Description |
 | ------------------ | --------- | ----------- |
 | *error* | String | An error message if there was a problem, or null if successful |
+| *response* | Object | An http response object |
 
 
 ### publishToDevice(*deviceIds, msg [, contentType] [, cb]*)
@@ -171,7 +172,7 @@ The callback will be called with the following arguments:
 | Callback Parameter | Data Type | Description |
 | ------------------ | --------- | ----------- |
 | *error* | String | An error message if there was a problem, or null if successful |
-
+| *response* | Object | An http response object |
 
 ### subscribe(*[, topics][, cb]*)
 
@@ -209,7 +210,7 @@ The callback will be called with the following arguments:
 
 | Callback Parameter | Data Type | Description |
 | ------------------ | --------- | ----------- |
-| *response* | Table | The http response received from Conctr. The message will be in `response.msg`. |
+| *response* | Table | The http response received from Conctr. The message will be in `response.body`. |
 
 ### unsubscribe()
 
