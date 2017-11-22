@@ -379,7 +379,7 @@ class Conctr {
             }
 
             local wakeupTime = 0;
-            
+
             if (resp.statuscode >= 200 && resp.statuscode <= 300) {
                 // wake up time is 0
             } else if (resp.statuscode == 429) {
@@ -493,6 +493,7 @@ class Conctr {
 
         post(url,payload,_headers,function(resp){
 
+            if(DEBUG) server.log("Log append statuscode: "+resp.statuscode);
         }.bindenv(this));
     }
 
