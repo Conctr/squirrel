@@ -211,7 +211,7 @@ class Conctr {
             }
 
             if (shortTime) {
-                server.log("Conctr: Warning _ts must be after 1st Jan 2000. Setting to imps time() function.")
+                log ("Conctr: Warning _ts must be after 1st Jan 2000. Setting to imps time() function.")
                 v._ts <- time();
             }
 
@@ -238,7 +238,7 @@ class Conctr {
         if (protocol == MQTT) {
             _protocol = protocol;
         } else {
-            server.error(protocol + " is not a valid protocol.");
+            server.error (protocol + " is not a valid protocol.");
         }
         _pubSubEndpoints = _formPubSubEndpointUrls(_app_id, _api_key, _device_id, _region, _env);
         return _protocol
@@ -275,7 +275,7 @@ class Conctr {
 
     // 
     // Publishes a message to a specific device.
-    // @param  {String/Array}   deviceId     Device id(s) the message should be sent to
+    // @param  {String/Array}   deviceIds     Device id(s) the message should be sent to
     // @param  {[type]}         msg          Data to be sent to be published
     // @param  {[type]}         contentType  Header specifying the content type of the msg
     // @param  {Function}       cb           Function called on completion of publish request
@@ -304,6 +304,10 @@ class Conctr {
             throw "Conctr: callback to subscribe is a required parameter";
         }
 
+        if(typeof topics == "string"){
+            topics = [topics];
+        }
+
         // If no topics to subscribe to found, subscribe to this devices id
         if (topics.len() == 0) {
             topics = ["dev/" + _device_id];
@@ -319,13 +323,13 @@ class Conctr {
         local chunks = "";
         local contentLength = null;
         local reqTime = time();
-        local reconnect = function() {
+        local reconnect = function () {
                 subscribe(topics, cb);
             }
 
 
-        // Http streaming callback
-        local _streamCb = function(chunk) {
+        // HTTP streaming callback
+        local _streamCb = function (chunk) {
 
             // User called unsubscribe. Close connection.
             if (_pollingReq == null) return;
@@ -345,7 +349,7 @@ class Conctr {
                     try {
                         contentLength = contentLength.tointeger();
                     } catch (e) {
-                        // server.error("Conctr: " + e);
+                        // server.error ("Conctr: " + e);
                     }
 
                     // Leave the rest of the msg
@@ -355,7 +359,7 @@ class Conctr {
 
             // Handle incorrect message i.e. 502 html returned
             if (typeof contentLength == "string") {
-                // server.error("Conctr: Got invalid response: " + chunks)
+                // server.error ("Conctr: Got invalid response: " + chunks)
                 return reconnect();
             }
 
@@ -369,8 +373,8 @@ class Conctr {
             }
         }
 
-        // http done callback
-        local _doneCb = function(resp) {
+        // HTTP done callback
+        local _doneCb = function (resp) {
             
             // We dont allow non chunked requests. So if we recieve a message in this func
             // it is the last message of the steam and may contain the last chunk
@@ -384,17 +388,14 @@ class Conctr {
                 // wake up time is 0
             } else if (resp.statuscode == 429) {
                 wakeupTime = 1;
-            } else if(resp.statuscode == 599){
-                server.log("Blowing zombie agents brains out!");
-                return;
-            }else if (resp.statuscode == 401) {
+            } else if (resp.statuscode == 401) {
                 throw "Conctr: Authentication failed";
             } else {
                 local conTime = time() - reqTime;
                 if (conTime < MIN_RECONNECT_TIME) {
                     wakeupTime = MIN_RECONNECT_TIME - conTime;
                 }
-                server.error("Conctr: Subscribe failed with error code " + resp.statuscode + ". Retrying in " + wakeupTime + " seconds");
+                server.error ("Conctr: Subscribe failed with error code " + resp.statuscode + ". Retrying in " + wakeupTime + " seconds");
             }
             
             
@@ -439,7 +440,7 @@ class Conctr {
 
 
     // 
-    // Http GET request with conctr auth injected in automatically
+    // HTTP GET request with conctr auth injected in automatically
     // 
     // @param  {String}     url       Url to hit
     // @param  {Table}      headers   Additional headers pass
@@ -453,7 +454,7 @@ class Conctr {
 
         headers["Authorization"] <- _headers["Authorization"];
 
-        _requestWithRetry("GET", url, headers, "", function(err, resp) {
+        _requestWithRetry("GET", url, headers, "", function (err, resp) {
             if (err) cb(err,null);
             else cb(null, resp);
         }.bindenv(this));
@@ -461,7 +462,7 @@ class Conctr {
 
 
     // 
-    // Http POST request with conctr auth injected in automatically
+    // HTTP POST request with conctr auth injected in automatically
     // 
     // @param  {String}     url       Url to hit
     // @param  {Table}      payload   Payload to send
@@ -480,7 +481,7 @@ class Conctr {
 
         headers["Authorization"] <- _headers["Authorization"];
 
-        _requestWithRetry("POST", url, headers, payload, function(err, resp) {
+        _requestWithRetry("POST", url, headers, payload, function (err, resp) {
             if (err) cb(err);
             else cb(resp);
         }.bindenv(this));
@@ -494,21 +495,16 @@ class Conctr {
     function log(msg){
 
         if (typeof msg != "string") {
-            try {
-                msg = http.jsonencode(msg);
-            } catch (e) {
-                server.error("Conctr: "+e);
-                return;
-            }
+            msg = http.jsonencode(msg);
         }
 
-        server.log(msg);
+        server.log ("Conctr: "+msg);
 
         local url = format("https://api.%s.conctr.com/admin/apps/%s/appendLog", _env, _app_id);
         local payload = {"msg":msg}
 
-        post(url,payload,_headers,function(resp){
-            if(DEBUG) server.log("Log append statuscode: "+resp.statuscode);
+        post(url,payload,_headers,function (resp){
+            if(DEBUG) server.log ("Log append statuscode: "+resp.statuscode);
         }.bindenv(this));
     }
 
@@ -553,7 +549,7 @@ class Conctr {
     // 
     function _processData(chunks, cb) {
         local response = _decode(chunks);
-        imp.wakeup(0, function() {
+        imp.wakeup(0, function () {
             cb(response);
         }.bindenv(this));
         return;
@@ -609,7 +605,7 @@ class Conctr {
             try {
                 body = http.jsondecode(encodedBody);
             } catch (e) {
-                server.error(e)
+                server.error (e)
             }
         }
         return body;
@@ -634,7 +630,7 @@ class Conctr {
         local url = _formDataEndpointUrl();
         local req = http.request("POST", url, _headers, http.jsonencode(payload));
 
-        req.sendasync(function(resp) {
+        req.sendasync(function (resp) {
 
             if (resp.statuscode >= 200 && resp.statuscode < 300) {
 
@@ -662,7 +658,7 @@ class Conctr {
                 // Wait a second for the agent to cool off after an error
                 // Don't pass if there is another timer running
                 if (_pendingTimer != null) return;
-                _pendingTimer = imp.wakeup(1, function() {
+                _pendingTimer = imp.wakeup(1, function () {
                     if (DEBUG) log("Conctr: Sending queued data in batch");
                     // backup and release the pending queue before retrying to post it
                     _pendingTimer = null;
@@ -677,7 +673,7 @@ class Conctr {
                 // Unrecoverable error or max retries, dont bother retrying let the user handle it.
                 local err = "HTTP error code: " + resp.statuscode;
                 if (cb == null) {
-                    server.error("Conctr: " + err);
+                    server.error ("Conctr: " + err);
                 } else {
                     // Call all callbacks
                     if (typeof cb != "array") cb = [cb];
@@ -696,7 +692,7 @@ class Conctr {
     // 
     // Takes a http request and retries request in specific scenarios like 429 or curl errors
     // 
-    // @param  {Object}   req       Http request
+    // @param  {Object}   req       HTTP request
     // @param  {Function} cb        Function to call on response. Takes args (err, resp)
     // @param  {Table}    opts      Table to specify retry opts.
     // 
@@ -717,7 +713,7 @@ class Conctr {
 
         local req = http.request(method, url, headers, payload);
 
-        req.sendasync(function(resp) {
+        req.sendasync(function (resp) {
             local wakeupTime = 1;
             // Get set opts
             local maxRetries = ("maxRetries" in opts && opts.maxRetries < RETRIES_LIMIT) ? opts.maxRetries : MAX_RETIES_DEFAULT;
@@ -748,7 +744,7 @@ class Conctr {
                 // Unrecoverable error or max retries, dont bother retrying let the user handle it.
                 local error = "HTTP error code: " + resp.statuscode;
                 if (cb) cb(error, resp);
-                else server.error("Conctr: " + error);
+                else server.error ("Conctr: " + error);
                 return;
             }
 
@@ -756,7 +752,7 @@ class Conctr {
             opts._retryNum <- retryNum + 1;
 
             // Retry in wakeupTime seconds
-            imp.wakeup(wakeupTime, function() {
+            imp.wakeup(wakeupTime, function () {
                 _requestWithRetry(method, url, headers, payload, opts, cb);
             }.bindenv(this));
         }.bindenv(this));
@@ -769,7 +765,7 @@ class Conctr {
     function _setupListeners() {
 
         // Listen for data events from the device
-        _sender.on(DATA_EVENT, function(msg, reply = null) {
+        _sender.on(DATA_EVENT, function (msg, reply = null) {
 
             // Reply is null when we are agent.on
             msg = (reply == null) ? msg : msg.data;
@@ -779,7 +775,7 @@ class Conctr {
                 sendData(msg)
             } else {
                 // Send response back to the device
-                sendData(msg, function(err, resp) {
+                sendData(msg, function (err, resp) {
                     // Send both err and resp so callback can
                     // can be called with both params on device
                     reply({ "err": err, "resp": resp })
@@ -790,7 +786,7 @@ class Conctr {
 
 
         // Listen for location data from the device
-        _sender.on(LOCATION_REQ_EVENT, function(msg, reply = null) {
+        _sender.on(LOCATION_REQ_EVENT, function (msg, reply = null) {
 
             // Reply is null when we are agent.on
             msg = (reply == null) ? msg : msg.data;
@@ -836,7 +832,7 @@ class Conctr {
 
         local url = _formClaimEndpointUrl();
         local payload = { "consumer_jwt": context.req.body.consumer_jwt };
-        _requestWithRetry("post", url, _headers, http.jsonencode(payload), function(err, resp) {
+        _requestWithRetry("post", url, _headers, http.jsonencode(payload), function (err, resp) {
             if (err != null) {
                 return context.send(400, { "error": err });
             }
@@ -903,7 +899,7 @@ class Conctr {
             if (!_LOCAL_MODE) {
                 endpoints[action] <- format("https://api.%s.conctr.com/%s/%s/%s", env, _protocol, appId, action);
             } else {
-                log("CONCTR: Warning using localmode");
+                log("Conctr: Warning using localmode");
                 endpoints[action] <- format("http://%s.ngrok.io/%s/%s/%s", _ngrokID, _protocol, appId, action);
             }
             // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.

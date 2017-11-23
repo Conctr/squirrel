@@ -88,9 +88,9 @@ local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(currentTempAndPressure, function(error, response) {
     if (error) {
-        server.error("Failed to deliver to Conctr: " + error);
+        server.error ("Failed to deliver to Conctr: " + error);
     } else {
-        server.log("Data was successfully recieved by Conctr");
+        server.log ("Data was successfully recieved by Conctr");
     }
 }.bindenv(this));
 ```
@@ -114,9 +114,9 @@ conctr.sendLocation()
 
 Publishes a message to a specific topic.
 
-| Key             | Data Type | Required  | Description |
-| --------------- | --------- | -------- | ----------- |
-| *topics*  | Array   | Yes | List of Topics that message should be sent to. |
+| Key             |     Data Type  | Required  | Description |
+| --------------- | -------------- | -------- | ----------- |
+| *topics*        | Array/String   | Yes | Topic/List of Topics that message should be sent to. |
 | *msg*  | Any   | Yes  |Data to be published. If anything other than a string is sent, it will be json encoded.|
 | *contentType*  | String   | No       |Header specifying the content type of the msg. If a contentType is not provided the msg will be json encoded by default|
 | *cb*  | Function   | No       | Function called on completion of publish request. |
@@ -127,10 +127,10 @@ Publishes a message to a specific topic.
 local msg = "Hello World";
 
 // publish message to topic 'test'
-conctr.publish(["test"], msg, function(err){
+conctr.publish(["test"], msg, function(err) {
 
-    if(err) server.error("Error"+err);
-    else server.log("Successfully published message");
+    if (err) server.error ("Error"+err);
+    else server.log ("Successfully published message");
 
 }.bindenv(this));
 ```
@@ -148,7 +148,7 @@ Publishes a message to a specific device.
 
 | Key             | Data Type | Required  | Description |
 | --------------- | --------- | -------- | ----------- |
-| *deviceIds*  | Array   | Yes | List of device ids that the message should be sent to. |
+| *deviceIds*  | Array/String   | Yes | Device id/List of device ids that the message should be sent to. |
 | *msg*  | Any   | Yes  |Data to be published. If anything other than a string is sent, it will be json encoded.|
 | *contentType*  | String   | No       |Header specifying the content type of the msg. If a contentType is not provided the msg will be json encoded by default|
 | *cb*  | Function   | No       | Function called on completion of publish request. |
@@ -159,10 +159,10 @@ Publishes a message to a specific device.
 local msg = "Hello World";
 
 // publish message to this device
-conctr.publishToDevice([imp.configparams.deviceid], msg, function(err){
+conctr.publishToDevice([imp.configparams.deviceid], msg, function(err) {
 
-    if(err) server.error("Error"+err);
-    else server.log("Successfully published message");
+    if (err) server.error ("Error"+err);
+    else server.log ("Successfully published message");
 
 }.bindenv(this));
 ```
@@ -187,19 +187,19 @@ Subscribe to a single/list of topics. NOTE: Calling subscribe again with a new s
 
 ```squirrel
 // Subscribe to default topics
-conctr.subscribe(function(response){
-    server.log("Got message:"+response.body)
+conctr.subscribe(function(response) {
+    server.log ("Got message:"+response.body);
 }.bindenv(this))
 
 // Publish in 2 seconds to ensure subscription is connected
-imp.wakeup(2, function(){
+imp.wakeup(2, function() {
     local msg = "Hello World";
     
     // publish message
-    conctr.publishToDevice(imp.configparams.deviceid, msg, function(err){
+    conctr.publishToDevice(imp.configparams.deviceid, msg, function(err) {
     
-        if(err) server.error("Error"+err);
-        else server.error("Successfully published message");
+        if (err) server.error ("Error"+err);
+        else server.error ("Successfully published message");
         
     }.bindenv(this));
 }.bindenv(this))
@@ -239,10 +239,10 @@ Performs a GET request to Conctr with authentication headers automatically added
 local url = "https://api.staging.conctr.com/status";
 
 // get a status request of Conctr
-conctr.get(url, function(err ,resp){
+conctr.get(url, function(err ,resp) {
 
-    if(err) server.error("Error"+err);
-    else server.log("Successfully got response");
+    if (err) server.error ("Error"+err);
+    else server.log ("Successfully got response");
 
 }.bindenv(this));
 ```
@@ -276,10 +276,10 @@ local payload = {
 }
 
 // append a log to application logs
-conctr.post(url, payload, function(err ,resp){
+conctr.post(url, payload, function(err ,resp) {
 
-    if(err) server.error("Error"+err);
-    else server.log("Successfully appended log");
+    if (err) server.error ("Error"+err);
+    else server.log ("Successfully appended log");
 
 }.bindenv(this));
 ```
@@ -292,7 +292,7 @@ The callback will be called with the following arguments:
 | *resp* | Table | Http response |
 
 ### log(*msg*)
-Log a message to application in Conctr. Will also output log to server.log. 
+Log a message to application in Conctr. Will also output log to server.log. Logs can be viewed using the [conctr cli](https://www.npmjs.com/package/conctr).
 NOTE: Non string type messages will be JSON encoded before sending to Conctr.
 
 | Key             | Data Type | Required  | Description |
@@ -379,9 +379,9 @@ local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(currentTempAndPressure, function(error, response) {
     if (error) {
-        server.error("Failed to deliver to Conctr: " + error);
+        server.error ("Failed to deliver to Conctr: " + error);
     } else {
-        server.log("Data was successfully send");
+        server.log ("Data was successfully send");
     }
 }.bindenv(this));
 ```
