@@ -42,16 +42,17 @@ class Conctr {
     static AMQP = "amqp";
     static MQTT = "mqtt";
     static STREAM_TERMINATOR = "\r\n";
-    static CONN_TIMEOUT = 86400;
+    static CONN_TIMEOUT = 3600;
 
     // protocol vars
     _protocol = null;
     _msgQueue = null;
 
     // Pending queue status
-    _pendingReqs = null;
-    _pendingTimer = null;
+    _pendingReqs = null; // pending a request 
+    _pendingTimer = null; // timer for pending a request
     _pollingReq = null;
+    _reconnectTimer = null;
 
     // Pub/sub endpoints
     _pubSubEndpoints = null;
@@ -67,10 +68,6 @@ class Conctr {
     _rocky = null; // rocky library object
     _sender = null; // messaging object
     _location = null; // the last known location
-    
-    // Pending queue status
-    _pendingReqs = null; // pending a request 
-    _pendingTimer = null; // timer for pending a request
 
     // Debug flag. If set, stuff will log
     DEBUG = false;
@@ -122,7 +119,7 @@ class Conctr {
         _ngrokID = ("ngrokid" in opts) ? opts.ngrokid : null;
 
         _protocol = ("protocol" in opts) ? opts.protocol : MQTT;
-        _pubSubEndpoints = _formPubSubEndpointUrls(_app_id, _device_id, _region, _env);
+        _pubSubEndpoints = _formPubSubEndpointUrls();
 
         // Set up msg queue
         _msgQueue = [];
@@ -210,7 +207,7 @@ class Conctr {
             }
 
             if (shortTime) {
-                log ("Conctr: Warning _ts must be after 1st Jan 2000. Setting to imps time() function.")
+                this.log("Warning _ts must be after 1st Jan 2000. Setting to imps time() function.")
                 v._ts <- time();
             }
 
@@ -237,9 +234,9 @@ class Conctr {
         if (protocol == MQTT) {
             _protocol = protocol;
         } else {
-            server.error ("Conctr: "+protocol + " is not a valid protocol.");
+            this.error(protocol + " is not a valid protocol.");
         }
-        _pubSubEndpoints = _formPubSubEndpointUrls(_app_id, _api_key, _device_id, _region, _env);
+        _pubSubEndpoints = _formPubSubEndpointUrls();
         return _protocol
     }
 
@@ -251,7 +248,7 @@ class Conctr {
     // 
     function sendLocation(sendToConctr = true) {
 
-        if (DEBUG) log("Conctr: requesting location be sent to " + (sendToConctr ? "conctr" : "agent"));
+        if (DEBUG) this.log("requesting location be sent to " + (sendToConctr ? "conctr" : "agent"));
         _sender.send(LOCATION_REQ_EVENT, sendToConctr);
 
     }
@@ -303,7 +300,7 @@ class Conctr {
             throw "Conctr: callback to subscribe is a required parameter";
         }
 
-        if (typeof topics == "string"){
+        if (typeof topics == "string") {
             topics = [topics];
         }
 
@@ -322,9 +319,13 @@ class Conctr {
         local chunks = "";
         local contentLength = null;
         local reqTime = time();
+
+        // Callback function for resubscribing
         local _reconnect = function () {
-                subscribe(topics, cb);
-            }
+            if (_reconnectTimer) imp.cancelwakeup(_reconnectTimer);
+            _reconnectTimer = null;
+            subscribe(topics, cb);
+        }
 
 
         // HTTP streaming callback
@@ -333,7 +334,7 @@ class Conctr {
             // User called unsubscribe. Close connection.
             if (_pollingReq == null) return;
 
-            // accumulate chuncks till we get a full msg
+            // accumulate chunks until we get a full msg
             chunks += chunk;
 
             // Check whether we have received the content length yet (sent as first line of msg)
@@ -348,7 +349,7 @@ class Conctr {
                     try {
                         contentLength = contentLength.tointeger();
                     } catch (e) {
-                        // server.error ("Conctr: " + e);
+                        // let the error get handled downstream
                     }
 
                     // Leave the rest of the msg
@@ -358,7 +359,7 @@ class Conctr {
 
             // Handle incorrect message i.e. 502 html returned
             if (typeof contentLength == "string") {
-                // server.error ("Conctr: Got invalid response: " + chunks)
+                if (DEBUG) this.error("Got invalid response: " + chunks)
                 return _reconnect();
             }
 
@@ -372,19 +373,22 @@ class Conctr {
             }
         }
 
+
         // HTTP done callback
         local _doneCb = function(resp) {
             
-            // We dont allow non chunked requests. So if we recieve a message in this func
+            // We dont allow non-chunked requests. So if we recieve a message in this func
             // it is the last message of the steam and may contain the last chunk
             if ("body" in resp && !(resp.body == null || resp.body == "")) {
+                this.error("Trailing chunk detected: " + resp.body);
                 _streamCb(resp);
             }
 
             local wakeupTime = 0;
-
             if (resp.statuscode >= 200 && resp.statuscode <= 300) {
-                // wake up time is 0
+                wakeupTime = 0;
+            } else if (resp.statuscode == 28) {
+                wakeupTime = 0;
             } else if (resp.statuscode == 429) {
                 wakeupTime = 1;
             } else if (resp.statuscode == 401) {
@@ -394,34 +398,28 @@ class Conctr {
                 if (conTime < MIN_RECONNECT_TIME) {
                     wakeupTime = MIN_RECONNECT_TIME - conTime;
                 }
-                server.error ("Conctr: Subscribe failed with error code " + resp.statuscode + ". Retrying in " + wakeupTime + " seconds");
+                this.error(format("Subscribe failed with error code %d. Retrying in %d seconds", resp.statuscode, wakeupTime));
             }
             
-            
-            // Reconnect in a bit or now based on disconnection reason
-            imp.wakeup(wakeupTime, _reconnect.bindenv(this));
-            
+            this.log(format("Reconnecting. Error code %d. Retrying in %d seconds", resp.statuscode, wakeupTime));
+
+            _pollingReq = null;
+            _reconnectTimer = imp.wakeup(wakeupTime, _reconnect.bindenv(this));
+
         };
+
 
         headers["Content-Type"] <- "application/json";
         headers["Connection"] <- "keep-alive";
-        headers["Transfer-encoding"] <- "chunked";
+        headers["X-Transfer-Encoding"] <- "chunked";
         headers["Authorization"] <- _headers["Authorization"];
         payload["topics"] <- topics;
         payload["clientId"] <- _device_id;
-        
-        local _oldReq = null;
-        
-        // Check there isnt a current connection, if there is keep a copy
-        if (_pollingReq) _oldReq = _pollingReq;
 
+        // Start the long polling HTTP request, sending data chunks to streamdb() and finalisation to donecb().
         _pollingReq = http.post(_pubSubEndpoints[action], headers, http.jsonencode(payload));
-
-        // Call callback directly when not chucked response, handle chuncking in second arg to sendAsync
-        _pollingReq.sendasync(_doneCb.bindenv(this), _streamCb.bindenv(this), CONN_TIMEOUT);
+        _pollingReq.sendasync(_doneCb.bindenv(this), _streamCb.bindenv(this), CONN_TIMEOUT - 10);
         
-        // new req made, cancel old req
-        if (_oldReq) _oldReq.cancel();
     }
 
 
@@ -429,6 +427,8 @@ class Conctr {
     // Unsubscribe to a single/list of topics
     // 
     function unsubscribe() {
+        if (_reconnectTimer) imp.cancelwakeup(_reconnectTimer);
+        _reconnectTimer = null;
         if (_pollingReq) _pollingReq.cancel();
         _pollingReq = null;
     }
@@ -482,12 +482,12 @@ class Conctr {
         }.bindenv(this));
     }
 
-    /**
-     * Logs to conctr logs and also to server.log
-     * 
-     * @param  {String} msg Message to store. If type is not string it will be json encoded.
-     */
-    function log(msg){
+    //
+    // Logs to conctr logs and also to server.log
+    // 
+    // @param  {String} msg Message to store. If type is not string it will be json encoded.
+    //
+    function log(msg) {
 
         if (typeof msg != "string") {
             msg = http.jsonencode(msg);
@@ -495,17 +495,40 @@ class Conctr {
 
         server.log("Conctr: " + msg);
 
-        local url = format("https://api.%s.conctr.com/admin/apps/%s/appendLog", _env, _app_id);
+        local url = _formLogEndpointUrl();
         local payload = {"msg":msg}
 
-        post(url,payload,_headers,function(resp){
-            if (DEBUG) server.log("Log append statuscode: "+resp.statuscode);
+        post(url,payload,_headers,function(resp) {
+            // if (DEBUG) server.log("Log append statuscode: "+resp.statuscode);
+        }.bindenv(this));
+    }
+
+
+    //
+    // Logs to conctr logs and also to server.error
+    // 
+    // @param  {String} msg Message to store. If type is not string it will be json encoded.
+    //
+    function error(msg) {
+
+        if (typeof msg != "string") {
+            msg = http.jsonencode(msg);
+        }
+
+        server.error("Conctr: " + msg);
+
+        local url = _formLogEndpointUrl();
+        local payload = { "msg": msg, "isError": true };
+
+        post(url, payload, _headers,function(resp) {
+            // if (DEBUG) server.log("Log append statuscode: "+resp.statuscode);
         }.bindenv(this));
     }
 
 
     // 
     // Publishes a message to the correct url.
+    // 
     // @param  {String}   relativeUrl   relative url that the message should be posted to
     // @param  {Table}    receivers     Object with either device_ids or topics
     // @param  {[type]}   msg           Data to be sent to be published
@@ -539,6 +562,7 @@ class Conctr {
 
     // 
     // Processes a chunk of data received via poll
+    // 
     // @param  {String}   chunks String chunk of data recieved from polling request
     // @param  {Function} cb     callback to call if a full message was found within chunk
     // 
@@ -547,12 +571,12 @@ class Conctr {
         imp.wakeup(0, function () {
             cb(response);
         }.bindenv(this));
-        return;
     }
 
 
     // 
     // Takes an encoded msg which contains headers and content and decodes it
+    // 
     // @param  {String}  encodedMsg http encoded message
     // @return {Table}   decoded Table with keys headers and body
     // 
@@ -569,7 +593,8 @@ class Conctr {
 
 
     // 
-    // Takes a http encoded string of header key value pairs and converts to a table of
+    // Takes a http encoded string of header key value pairs and converts to a table\
+    // 
     // @param  {String} encodedHeader http encoded string of header key value pairs
     // @return {Table}  Table of header key value pairs 
     // 
@@ -589,6 +614,7 @@ class Conctr {
 
     // 
     // Takes a http encoded string of the message body and a list of headers and parses the body based on Content-Type header.
+    // 
     // @param  {String}   encodedBody http encoded string of header key value pairs
     // @param  {String}   encodedBody http encoded string of header key value pairs
     // @return {Table}    Table of header key value pairs 
@@ -600,7 +626,7 @@ class Conctr {
             try {
                 body = http.jsondecode(encodedBody);
             } catch (e) {
-                log ("Conctr: "+e);
+                this.error(e);
             }
         }
         return body;
@@ -645,7 +671,7 @@ class Conctr {
                 // Create a new pending queue or append to an existing one
                 if (_pendingReqs == null) {
                     _pendingReqs = { "payloads": [], "callbacks": [] };
-                    if (DEBUG) log("Conctr: Starting to queue data in batch");
+                    if (DEBUG) this.log("Starting to queue data in batch");
                 }
                 _pendingReqs.payloads.extend(payload);
                 _pendingReqs.callbacks.push(cb);
@@ -654,7 +680,7 @@ class Conctr {
                 // Don't pass if there is another timer running
                 if (_pendingTimer != null) return;
                 _pendingTimer = imp.wakeup(1, function () {
-                    if (DEBUG) log("Conctr: Sending queued data in batch");
+                    if (DEBUG) this.log("Sending queued data in batch");
                     // backup and release the pending queue before retrying to post it
                     _pendingTimer = null;
                     local pendingReqs = _pendingReqs;
@@ -668,7 +694,7 @@ class Conctr {
                 // Unrecoverable error or max retries, dont bother retrying let the user handle it.
                 local err = "HTTP error code: " + resp.statuscode;
                 if (cb == null) {
-                    server.error ("Conctr: " + err);
+                    this.error(err);
                 } else {
                     // Call all callbacks
                     if (typeof cb != "array") cb = [cb];
@@ -739,7 +765,7 @@ class Conctr {
                 // Unrecoverable error or max retries, dont bother retrying let the user handle it.
                 local error = "HTTP error code: " + resp.statuscode;
                 if (cb) cb(error, resp);
-                else server.error ("Conctr: " + error);
+                else this.error(error);
                 return;
             }
 
@@ -791,10 +817,10 @@ class Conctr {
                 _location = msg._location;
                 if ("sendToConctr" in msg && msg.sendToConctr == true) {
                     // And send it to Conctr
-                    if (DEBUG) log("Conctr: sending location to conctr");
+                    if (DEBUG) this.log("sending location to conctr");
                     sendData({});
                 } else {
-                    if (DEBUG) log("Conctr: cached location in agent");
+                    if (DEBUG) this.log("cached location in agent");
                 }
             }
 
@@ -809,7 +835,7 @@ class Conctr {
     // @param  {Object} rocky Instantiated instance of the Rocky class
     // 
     function _setupAgentApi(rocky) {
-        if (DEBUG) log("Conctr: Set up agent endpoints");
+        if (DEBUG) this.log("Set up agent endpoints");
         rocky.post("/conctr/claim", _handleClaimReq.bindenv(this));
     }
 
@@ -831,7 +857,7 @@ class Conctr {
             if (err != null) {
                 return context.send(400, { "error": err });
             }
-            if (DEBUG) log("Conctr: Device claimed");
+            if (DEBUG) this.log("Device claimed");
             return context.send(200, resp);
         }.bindenv(this));
 
@@ -841,38 +867,20 @@ class Conctr {
     // 
     // Forms and returns the insert data API endpoint for the current device and Conctr application
     // 
-    // @param  {String} appId
-    // @param  {String} deviceId
-    // @param  {String} region
-    // @param  {String} env
     // @return {String} url endpoint that will accept the data payload
     // 
     function _formDataEndpointUrl() {
-
-        // This is the temporary value of the data endpoint.
         return (_LOCAL_MODE == true) ? format("http://%s.ngrok.io/data/apps/%s/devices/%s", _ngrokID, _app_id, _device_id) : format("https://api.%s.conctr.com/data/apps/%s/devices/%s", _env, _app_id, _device_id);
-
-        // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
-        // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
     }
 
 
     // 
     // Forms and returns the claim device API endpoint for the current device and Conctr application
     // 
-    // @param  {String} appId
-    // @param  {String} deviceId
-    // @param  {String} region
-    // @param  {String} env
     // @return {String} url endpoint that will accept the data payload
     // 
     function _formClaimEndpointUrl() {
-
-        // This is the temporary value of the data endpoint.
         return format("https://api.%s.conctr.com/admin/apps/%s/devices/%s/claim", _env, _app_id, _device_id);
-
-        // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
-        // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s/claim", region, env, appId, deviceId);
     }
 
 
@@ -880,33 +888,41 @@ class Conctr {
     // 
     // Forms and returns the insert data API endpoint for the current device and Conctr application
     // 
-    // @param  {String} appId
-    // @param  {String} deviceId
-    // @param  {String} region
-    // @param  {String} env
     // @return {String} url endpoint that will accept the data payload
     // 
-    function _formPubSubEndpointUrls(appId, deviceId, region, env) {
+    function _formPubSubEndpointUrls() {
 
         local pubSubActions = ["subscribe", "publish"];
         local endpoints = {};
         foreach (idx, action in pubSubActions) {
             if (!_LOCAL_MODE) {
-                endpoints[action] <- format("https://api.%s.conctr.com/%s/%s/%s", env, _protocol, appId, action);
+                endpoints[action] <- format("https://api.%s.conctr.com/%s/%s/%s", _env, _protocol, _app_id, action);
             } else {
-                log("Conctr: Warning using localmode");
-                endpoints[action] <- format("http://%s.ngrok.io/%s/%s/%s", _ngrokID, _protocol, appId, action);
+                this.log("Warning using localmode");
+                endpoints[action] <- format("http://%s.ngrok.io/%s/%s/%s", _ngrokID, _protocol, _app_id, action);
             }
-            // The data endpoint is made up of a region (e.g. us-west-2), an environment (production/core, staging, dev), an appId and a deviceId.
-            // return format("https://api.%s.%s.conctr.com/data/apps/%s/devices/%s", region, env, appId, deviceId);
         }
         return endpoints;
     }
 
 
+    // 
+    // Forms and returns the log API endpoint for the current Conctr application
+    // 
+    // @return {String} url endpoint that will accept the log messages
+    // 
+    function _formLogEndpointUrl() {
+        return format("https://api.%s.conctr.com/admin/apps/%s/appendLog", _env, _app_id);
+    }
+
+
+    //
+    //
+    //
     function _useLocalmode(ngrokid) {
         _ngrokID = ngrokid;
         _LOCAL_MODE = true;
-        _formPubSubEndpointUrls(_app_id, _device_id, _region, _env);
+        _formPubSubEndpointUrls();
     }
+    
 }
