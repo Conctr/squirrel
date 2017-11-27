@@ -168,7 +168,7 @@ class AgentTestCase extends ImpTestCase {
     }
 
     // test the publish function sent correctly checks for a http created response
-    function testsubscribe() {
+    function testSubscribe() {
         return Promise(function(resolve, reject) {
             
             // Message to publih
@@ -181,12 +181,10 @@ class AgentTestCase extends ImpTestCase {
                 resolve();
             }.bindenv(this))
 
-            imp.wakeup(10, function() {
-                this.info("Published a message")
-                conctr.publish("test_topic", msg, function(err, resp) {
-                    if (err) reject(err);
-                });
-            }.bindenv(this))
+            this.info("Published a message")
+            conctr.publish("test_topic", msg, function(err, resp) {
+                if (err) reject(err);
+            });
         }.bindenv(this))
     }
 
