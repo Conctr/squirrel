@@ -593,7 +593,7 @@ class Conctr {
 
 
     // 
-    // Takes a http encoded string of header key value pairs and converts to a table\
+    // Takes a http encoded string of header key value pairs and converts to a table
     // 
     // @param  {String} encodedHeader http encoded string of header key value pairs
     // @return {Table}  Table of header key value pairs 

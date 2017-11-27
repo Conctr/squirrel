@@ -176,11 +176,12 @@ The callback will be called with the following arguments:
 
 ### subscribe(*[, topics][, cb]*)
 
-Subscribe to a single/list of topics. NOTE: Calling subscribe again with a new set of topics will cancel any previous subscription requests.
+Subscribe to a single/list of topics. 
+NOTE: Calling subscribe again with a new set of topics will cancel any previous subscription requests.
 
 | Key             | Data Type | Required | Default Value  | Description |
 | --------------- | --------- | -------- | -------------- | ----------- |
-| *topics*  | Array   | Yes       | Currently set device id           | List of Topics to subscribe to. |
+| *topics*  | Array   | Yes       | Subscibes to the device id topic| List of Topics to subscribe to. |
 | *cb*  | Function   | No       | True           | Function called on message receipt. |
 
 #### Example
@@ -292,7 +293,8 @@ The callback will be called with the following arguments:
 | *resp* | Table | Http response |
 
 ### log(*msg*)
-Log a message to application in Conctr. Will also output log to server.log. Logs can be viewed using the [conctr cli](https://www.npmjs.com/package/conctr).
+Log a message to application in Conctr. Will also output log to `server.log`. 
+Logs can be viewed using the [conctr cli](https://www.npmjs.com/package/conctr).
 NOTE: Non string type messages will be JSON encoded before sending to Conctr.
 
 | Key             | Data Type | Required  | Description |
@@ -309,12 +311,25 @@ local log = "I am an important log message";
 conctr.log(log);
 ```
 
-The callback will be called with the following arguments:
+### error(*msg*)
+Logs an error message to application in Conctr. Will also output log to `server.error`. 
+Logs can be viewed using the [conctr cli](https://www.npmjs.com/package/conctr).
+NOTE: Non string type messages will be JSON encoded before sending to Conctr.
 
-| Callback Parameter | Data Type | Description |
-| ------------------ | --------- | ----------- |
-| *error* | String | An error message if there was a problem, or null if successful |
-| *resp* | Table | Http response |
+| Key             | Data Type | Required  | Description |
+| --------------- | --------- | -------- | ----------- |
+| *errMsg*           | String    | Yes | Error message to log to application|
+
+#### Example
+
+```squirrel
+
+local err = "Oh no, Something went wrong";
+
+// append a log to application logs
+conctr.error(err);
+```
+
 
 
 
