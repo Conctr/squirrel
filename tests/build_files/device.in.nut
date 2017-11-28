@@ -119,23 +119,15 @@ class Conctr {
     //
     // Sends data to conctr
     //
-    // @param  {Table or Array} payloadOrig - Table or Array containing data to be persisted
+    // @param  {Table or Array} payload - Table or Array containing data to be persisted
     // @param  { {Function (err,response)} callback - Callback function on resp from Conctr through agent
     //
-    function sendData(payloadOrig, callback = null) {
-
-        local payload = {};
-
-        // Make a local copy to ensure that original payload is left unchanged
-        foreach(key, value in payloadOrig) {
-            payload[key] <- value;
-        } 
+    function sendData(payload, callback = null) {
 
         // If it's a table, make it an array
         if (typeof payload == "table") {
             payload = [payload];
         }
-
 
         if (typeof payload == "array") {
 
@@ -272,6 +264,7 @@ class Conctr {
 
     }
 }
+
 
 
 // Conctr options

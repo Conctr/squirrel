@@ -478,7 +478,7 @@ class Conctr {
 
         _requestWithRetry("POST", url, headers, payload, function(err, resp) {
             if (err) cb(err);
-            else cb(resp);
+            else cb(null, resp);
         }.bindenv(this));
     }
 
@@ -487,7 +487,7 @@ class Conctr {
     // 
     // @param  {String} msg Message to store. If type is not string it will be json encoded.
     //
-    function log(msg) {
+    function log(msg, cb = null) {
 
         if (typeof msg != "string") {
             msg = http.jsonencode(msg);
@@ -498,9 +498,7 @@ class Conctr {
         local url = _formLogEndpointUrl();
         local payload = {"msg":msg}
 
-        post(url,payload,_headers,function(resp) {
-            // if (DEBUG) server.log("Log append statuscode: "+resp.statuscode);
-        }.bindenv(this));
+        post(url,payload,_headers, cb);
     }
 
 
@@ -509,7 +507,7 @@ class Conctr {
     // 
     // @param  {String} msg Message to store. If type is not string it will be json encoded.
     //
-    function error(msg) {
+    function error(msg, cb = null) {
 
         if (typeof msg != "string") {
             msg = http.jsonencode(msg);
@@ -520,9 +518,7 @@ class Conctr {
         local url = _formLogEndpointUrl();
         local payload = { "msg": msg, "isError": true };
 
-        post(url, payload, _headers,function(resp) {
-            // if (DEBUG) server.log("Log append statuscode: "+resp.statuscode);
-        }.bindenv(this));
+        post(url, payload, _headers, cb);
     }
 
 

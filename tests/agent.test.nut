@@ -161,7 +161,7 @@ class AgentTestCase extends ImpTestCase {
 
             conctr.publish("test_topic", msg, function(err, resp) {
                 if (err) reject(err);
-                resolve();
+                else resolve();
             });
 
         }.bindenv(this))
@@ -181,10 +181,53 @@ class AgentTestCase extends ImpTestCase {
                 resolve();
             }.bindenv(this))
 
+            imp.wakeup(1,function(){
+
             this.info("Published a message")
             conctr.publish("test_topic", msg, function(err, resp) {
                 if (err) reject(err);
             });
+            }.bindenv(this));
+        }.bindenv(this))
+    }
+
+    function testLog() {
+        return Promise(function(resolve, reject) {
+            
+            // Log message
+            local log = "important test log";
+            
+            conctr.log(log, function(err, resp) {
+                if (err) {
+                    reject (err);
+                    return
+                }
+
+                // Ensure that the device ids do not already match
+                this.assertTrue(resp.statuscode == 201);
+                resolve();
+            }.bindenv(this))
+
+        }.bindenv(this))
+    }
+
+    function xtestError() {
+        return Promise(function(resolve, reject) {
+            
+            // Log message
+            local error = "horrible error";
+            
+            conctr.error(error, function(err, resp) {
+                if (err) {
+                    reject (err);
+                    return;
+                }
+
+                // Ensure that the device ids do not already match
+                this.assertTrue(resp.statuscode == 201);
+                resolve();
+            }.bindenv(this))
+
         }.bindenv(this))
     }
 
