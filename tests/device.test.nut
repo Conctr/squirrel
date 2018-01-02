@@ -56,7 +56,6 @@ class DeviceTestCase extends ImpTestCase {
                         // assert the data was accepted
                         this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
                     } else {
-                        server.log(resp)
                         // response will be 0 as there is no messageManager to get a response from
                         this.assertTrue(resp == 0);
                     }
@@ -80,7 +79,7 @@ class DeviceTestCase extends ImpTestCase {
                         },{
                             "temperature": 25,
                             "humidity": 70,
-                        }]
+                        }];
 
             // Send the payload
             conctr.sendData(payload, function(err, resp) {
@@ -91,7 +90,6 @@ class DeviceTestCase extends ImpTestCase {
                         // assert the data was accepted
                         this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
                     } else {
-                        server.log(resp)
                         // response will be 0 as there is no messageManager to get a response from
                         this.assertTrue(resp == 0);
                     }
