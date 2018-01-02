@@ -28,7 +28,7 @@ const CONCTR_TEST_HTTP_UNAUTHORIZED = 401;
 const CONCTR_TEST_DATA_INVALID_DATA_TYPE = "STRING";
 
 // error messages
-const CONCTR_ERROR_MESSAGE_INVALID_DATA = "Conctr: Payload must contain a table or an array of tables"
+const CONCTR_ERROR_MESSAGE_INVALID_DATA = "Conctr: Payload must contain a table or an array of tables";
 
 class DeviceTestCase extends ImpTestCase {
 
@@ -56,8 +56,8 @@ class DeviceTestCase extends ImpTestCase {
                         // assert the data was accepted
                         this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
                     } else {
-                        // response will be null as there is no messageManager to get a response from
-                        this.assertTrue(resp == null);
+                        // response will be 0 as there is no messageManager to get a response from
+                        this.assertTrue(resp == 0);
                     }
                     resolve();
                 } catch(error) {
@@ -67,6 +67,41 @@ class DeviceTestCase extends ImpTestCase {
             }.bindenv(this))
         }.bindenv(this))
     }
+
+
+    // tests the send Data function, checks that a 201 response was received
+    function testSendArrayData() {
+        return Promise(function(resolve, reject) {
+            // Ensure this payload matches your model
+            local payload = [{
+                            "temperature": 15,
+                            "humidity": 80,
+                        },{
+                            "temperature": 25,
+                            "humidity": 70,
+                        }];
+
+            // Send the payload
+            conctr.sendData(payload, function(err, resp) {
+                if (err) reject(err);
+                // Check if sender has reply capability
+                try {
+                    if ("onReply" in conctr._sender) {
+                        // assert the data was accepted
+                        this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
+                    } else {
+                        // response will be 0 as there is no messageManager to get a response from
+                        this.assertTrue(resp == 0);
+                    }
+                    resolve();
+                } catch(error) {
+                    reject(error);
+                }
+
+            }.bindenv(this))
+        }.bindenv(this))
+    }
+
 
 
 

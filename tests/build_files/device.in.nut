@@ -22,7 +22,7 @@
 
 class Conctr {
 
-    static VERSION = "2.0.0";
+    static VERSION = "2.1.0";
 
     // Events
     static DATA_EVENT = "conctr_data";
@@ -265,15 +265,7 @@ class Conctr {
     }
 }
 
-// MessageManager options
-// mmOpts <- {
-//     "retryInterval": 15,
-//     "messageTimeout": 20,
-//     "autoRetry": true,
-//     "maxAutoRetries": 10,
-// };
 
-// mm <- MessageManager(mmOpts);
 
 // Conctr options
 conctrOpts <- {
