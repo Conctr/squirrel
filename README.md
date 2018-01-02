@@ -12,7 +12,7 @@ To use this library you will need to:
 - Create an application.
 - Create a model within the application.
 
-**To add this library to your project, add** `#require "conctr.agent.lib.nut:2.0.0"` **to the top of your agent code and add** `#require "conctr.device.lib.nut:2.0.0"` **to the top of your device code**
+**To add this library to your project, add** `#require "conctr.agent.lib.nut:2.1.0"` **to the top of your agent code and add** `#require "conctr.device.lib.nut:2.1.0"` **to the top of your device code**
 
 ## Agent Class Usage
 ### Constructor: Conctr(*appId, apiKey, model[, options]*)
@@ -27,6 +27,7 @@ The constructor takes three required parameters: *appId, apiKey* and *model*. Th
 | *options.useAgentId*      | Boolean   | No       | `false`       | Boolean flag used to determine whether to use the imp agent ID instead of the device ID as the primary identifier to Conctr for the data sent. See *setDeviceId()* to set a custom ID |
 | *options.region*          | String    | No       | `"us-west-2"` |  Region of the instance to use. Currently only `"us-west-2"` is supported |
 | *options.environment*     | String    | No       | `"staging"`   | Conctr environment to send data to |
+| *options.protocol*     | `conctr.MQTT`| No       | `conctr.MQTT`   | Protocol to use to send message NOTE: Currently only MQTT is supported. |
 | *options.rocky*           | Object    | No       | `null`        | An instantiated [Rocky](https://electricimp.com/docs/libraries/utilities/rocky/) object to be used for accepting claim requests via HTTPS |
 | *options.messageManager*  | Object    | No       | `null`        | An instantiated [MessageManager](https://electricimp.com/docs/libraries/utilities/messagemanager/) or [Bullwinkle](https://electricimp.com/docs/libraries/utilities/bullwinkle/#bullwinkle) object to be used for guaranteeing message delivery from the device to the agent |
 
@@ -34,7 +35,7 @@ The constructor takes three required parameters: *appId, apiKey* and *model*. Th
 #### Example
 
 ```squirrel
-#require "conctr.agent.lib.nut:2.0.0"
+#require "conctr.agent.lib.nut:2.1.0"
 
 const API_KEY = "<YOUR API KEY>";
 const APP_ID = "<YOUR AUTHENTICATION TOKEN>";
@@ -87,9 +88,9 @@ local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(currentTempAndPressure, function(error, response) {
     if (error) {
-        server.error("Failed to deliver to Conctr: " + error);
+        server.error ("Failed to deliver to Conctr: " + error);
     } else {
-        server.log("Data was successfully recieved by Conctr");
+        server.log ("Data was successfully recieved by Conctr");
     }
 }.bindenv(this));
 ```
@@ -108,6 +109,229 @@ Retrieves the current location from the device and sends it to Conctr. This manu
 // Send location to conctr
 conctr.sendLocation()
 ```
+
+### publish(*topics, msg [, contentType] [, cb]*)
+
+Publishes a message to a specific topic.
+
+| Key             |     Data Type  | Required  | Description |
+| --------------- | -------------- | -------- | ----------- |
+| *topics*        | Array/String   | Yes | Topic/List of Topics that message should be sent to. |
+| *msg*  | Any   | Yes  |Data to be published. If anything other than a string is sent, it will be json encoded.|
+| *contentType*  | String   | No       |Header specifying the content type of the msg. If a contentType is not provided the msg will be json encoded by default|
+| *cb*  | Function   | No       | Function called on completion of publish request. |
+
+#### Example
+
+```squirrel
+local msg = "Hello World";
+
+// publish message to topic 'test'
+conctr.publish(["test"], msg, function(err) {
+
+    if (err) server.error ("Error"+err);
+    else server.log ("Successfully published message");
+
+}.bindenv(this));
+```
+
+The callback will be called with the following arguments:
+
+| Callback Parameter | Data Type | Description |
+| ------------------ | --------- | ----------- |
+| *error* | String | An error message if there was a problem, or null if successful |
+| *response* | Object | An http response object |
+
+
+### publishToDevice(*deviceIds, msg [, contentType] [, cb]*)
+Publishes a message to a specific device.
+
+| Key             | Data Type | Required  | Description |
+| --------------- | --------- | -------- | ----------- |
+| *deviceIds*  | Array/String   | Yes | Device id/List of device ids that the message should be sent to. |
+| *msg*  | Any   | Yes  |Data to be published. If anything other than a string is sent, it will be json encoded.|
+| *contentType*  | String   | No       |Header specifying the content type of the msg. If a contentType is not provided the msg will be json encoded by default|
+| *cb*  | Function   | No       | Function called on completion of publish request. |
+
+#### Example
+
+```squirrel
+local msg = "Hello World";
+
+// publish message to this device
+conctr.publishToDevice([imp.configparams.deviceid], msg, function(err) {
+
+    if (err) server.error ("Error"+err);
+    else server.log ("Successfully published message");
+
+}.bindenv(this));
+```
+
+The callback will be called with the following arguments:
+
+| Callback Parameter | Data Type | Description |
+| ------------------ | --------- | ----------- |
+| *error* | String | An error message if there was a problem, or null if successful |
+| *response* | Object | An http response object |
+
+### subscribe(*[, topics][, cb]*)
+
+Subscribe to a single/list of topics. 
+NOTE: Calling subscribe again with a new set of topics will cancel any previous subscription requests.
+
+| Key             | Data Type | Required | Default Value  | Description |
+| --------------- | --------- | -------- | -------------- | ----------- |
+| *topics*  | Array   | Yes       | Subscibes to the device id topic| List of Topics to subscribe to. |
+| *cb*  | Function   | No       | True           | Function called on message receipt. |
+
+#### Example
+
+```squirrel
+// Subscribe to default topics
+conctr.subscribe(function(response) {
+    server.log ("Got message:"+response.body);
+}.bindenv(this))
+
+// Publish in 2 seconds to ensure subscription is connected
+imp.wakeup(2, function() {
+    local msg = "Hello World";
+    
+    // publish message
+    conctr.publishToDevice(imp.configparams.deviceid, msg, function(err) {
+    
+        if (err) server.error ("Error"+err);
+        else server.error ("Successfully published message");
+        
+    }.bindenv(this));
+}.bindenv(this))
+
+```
+
+The callback will be called with the following arguments:
+
+| Callback Parameter | Data Type | Description |
+| ------------------ | --------- | ----------- |
+| *response* | Table | The http response received from Conctr. The message will be in `response.body`. |
+
+### unsubscribe()
+
+unsubscribes from all topics.
+
+#### Example
+
+```squirrel
+// Unsubscribe 
+conctr.subscribe()
+```
+
+
+### get(*url [, headers] [, cb]*)
+Performs a GET request to Conctr with authentication headers automatically added. 
+
+| Key             | Data Type | Required  | Description |
+| --------------- | --------- | -------- | ----------- |
+| *url*  | String   | Yes | Url to perform GET request on |
+| *headers*  | Table  | No  |Additional header to send|
+| *cb*  | Function   | No       | Function called on completion of publish request. |
+
+#### Example
+
+```squirrel
+local url = "https://api.staging.conctr.com/status";
+
+// get a status request of Conctr
+conctr.get(url, function(err ,resp) {
+
+    if (err) server.error ("Error"+err);
+    else server.log ("Successfully got response");
+
+}.bindenv(this));
+```
+
+The callback will be called with the following arguments:
+
+| Callback Parameter | Data Type | Description |
+| ------------------ | --------- | ----------- |
+| *error* | String | An error message if there was a problem, or null if successful |
+| *resp* | Table | Http response |
+
+### post(*url, payload, [, headers] [, cb]*)
+Performs a POST request to Conctr with authentication headers automatically added. 
+
+| Key             | Data Type | Required  | Description |
+| --------------- | --------- | -------- | ----------- |
+| *url*         | String    | Yes | Url to perform POST request on |
+| *payload*     | Any       | Yes | Body of POST request |
+| *headers*     | Table     | No  |Additional header to send|
+| *cb*          | Function  | No  | Function called on completion of publish request. |
+
+#### Example
+
+```squirrel
+// Example showing manual request to post a log to a Conctr application. Use log function below instead of manual implementation.
+
+local url="https://api.staging.conctr.com/admin/apps/asd8f8a9niks7sd7ds8dsd87/appendLog";
+
+local payload = {
+    "msg": "Hello World!"
+}
+
+// append a log to application logs
+conctr.post(url, payload, function(err ,resp) {
+
+    if (err) server.error ("Error"+err);
+    else server.log ("Successfully appended log");
+
+}.bindenv(this));
+```
+
+The callback will be called with the following arguments:
+
+| Callback Parameter | Data Type | Description |
+| ------------------ | --------- | ----------- |
+| *error* | String | An error message if there was a problem, or null if successful |
+| *resp* | Table | Http response |
+
+### log(*msg*)
+Log a message to application in Conctr. Will also output log to `server.log`. 
+Logs can be viewed using the [conctr cli](https://www.npmjs.com/package/conctr).
+NOTE: Non string type messages will be JSON encoded before sending to Conctr.
+
+| Key             | Data Type | Required  | Description |
+| --------------- | --------- | -------- | ----------- |
+| *msg*           | String    | Yes | Message to log to application|
+
+#### Example
+
+```squirrel
+
+local log = "I am an important log message";
+
+// append a log to application logs
+conctr.log(log);
+```
+
+### error(*msg*)
+Logs an error message to application in Conctr. Will also output log to `server.error`. 
+Logs can be viewed using the [conctr cli](https://www.npmjs.com/package/conctr).
+NOTE: Non string type messages will be JSON encoded before sending to Conctr.
+
+| Key             | Data Type | Required  | Description |
+| --------------- | --------- | -------- | ----------- |
+| *errMsg*           | String    | Yes | Error message to log to application|
+
+#### Example
+
+```squirrel
+
+local err = "Oh no, Something went wrong";
+
+// append a log to application logs
+conctr.error(err);
+```
+
+
+
 
 ## Device Class Usage
 **NOTE:** The device class is optional. It provides utility functions for interfacing with the agent class like automating the location sending process and provide queueing and error handling for sending data to Conctr.
@@ -170,9 +394,9 @@ local currentTempAndPressure = { "temperature" : 29, "pressure" : 1032};
 
 conctr.sendData(currentTempAndPressure, function(error, response) {
     if (error) {
-        server.error("Failed to deliver to Conctr: " + error);
+        server.error ("Failed to deliver to Conctr: " + error);
     } else {
-        server.log("Data was successfully send");
+        server.log ("Data was successfully send");
     }
 }.bindenv(this));
 ```

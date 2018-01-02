@@ -33,7 +33,6 @@ class AgentTestCase extends ImpTestCase {
     }
 
 
-
     // test the sendData function sent correctly checks for a http created response
     function testSendData() {
         return Promise(function(resolve, reject) {
@@ -41,7 +40,7 @@ class AgentTestCase extends ImpTestCase {
             local payload = {
                 "temperature": 15,
                 "humidity": 80,
-            }
+            };
 
             // Send the payload
             conctr.sendData(payload, function(err, resp) {
@@ -51,7 +50,37 @@ class AgentTestCase extends ImpTestCase {
                 try {
                     this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
                     resolve();
-                } catch(error) {
+                } catch (error) {
+                    reject(error);
+                }
+
+            }.bindenv(this))
+
+        }.bindenv(this))
+    }
+
+
+    // test the sendData function sent correctly checks for a http created response
+    function testSendArrayData() {
+        return Promise(function(resolve, reject) {
+            // Ensure this payload matches your model
+            local payload = [{
+                            "temperature": 15,
+                            "humidity": 80,
+                        },{
+                            "temperature": 25,
+                            "humidity": 70,
+                        }];
+
+            // Send the payload
+            conctr.sendData(payload, function(err, resp) {
+                if (err) reject(err);
+
+                // assert the data was accepted
+                try {
+                    this.assertEqual(CONCTR_TEST_HTTP_CREATED, resp.statuscode);
+                    resolve();
+                } catch (error) {
                     reject(error);
                 }
 
@@ -69,18 +98,18 @@ class AgentTestCase extends ImpTestCase {
         return Promise(function(resolve, reject) {
             // Ensure this payload matches your model
             local payload = {
-                "FIELD_NOT_IN_MODEL": 15,
-            }
-            // Send the payload
+                    "FIELD_NOT_IN_MODEL": 15,
+                };
+
+                // Send the payload
             conctr.sendData(payload, function(err, resp) {
                 // assert the data was not accepted
                 try {
                     this.assertEqual(CONCTR_TEST_HTTP_BAD_REQUEST, resp.statuscode);
                     resolve();
-                } catch(error) {
+                } catch (error) {
                     reject(error);
                 }
-
             }.bindenv(this))
         }.bindenv(this))
     }
@@ -104,9 +133,100 @@ class AgentTestCase extends ImpTestCase {
                 // Check new device id was set
                 this.assertEqual(conctr._device_id, newDeviceId);
                 resolve();
-            } catch(error) {
+            } catch (error) {
                 reject(error);
             }
+
+        }.bindenv(this))
+    }
+
+
+    // test the publish function sent correctly checks for a http created response
+    function testPublishToDevice() {
+        return Promise(function(resolve, reject) {
+            // Ensure this payload matches your model
+            local msg = "hello world";
+
+            conctr.publishToDevice(conctr._device_id, msg, function(err, resp) {
+                if (err) reject(err);
+                resolve();
+            });
+        }.bindenv(this))
+    }
+
+    function testPublish() {
+        return Promise(function(resolve, reject) {
+            // Ensure this payload matches your model
+            local msg = "hello world";
+
+            conctr.publish("test_topic", msg, function(err, resp) {
+                if (err) reject(err);
+                else resolve();
+            });
+
+        }.bindenv(this))
+    }
+
+    // test the publish function sent correctly checks for a http created response
+    function testSubscribe() {
+        return Promise(function(resolve, reject) {
+            
+            // Message to publih
+            local msg = "hello world";
+            
+            conctr.subscribe("test_topic",function(resp) {
+                local received = resp.body;
+                // Ensure that the device ids do not already match
+                this.assertTrue(received == msg);
+                resolve();
+            }.bindenv(this))
+
+            imp.wakeup(1,function(){
+
+            this.info("Published a message")
+            conctr.publish("test_topic", msg, function(err, resp) {
+                if (err) reject(err);
+            });
+            }.bindenv(this));
+        }.bindenv(this))
+    }
+
+    function testLog() {
+        return Promise(function(resolve, reject) {
+            
+            // Log message
+            local log = "important test log";
+            
+            conctr.log(log, function(err, resp) {
+                if (err) {
+                    reject (err);
+                    return
+                }
+
+                // Ensure that the device ids do not already match
+                this.assertTrue(resp.statuscode == 201);
+                resolve();
+            }.bindenv(this))
+
+        }.bindenv(this))
+    }
+
+    function xtestError() {
+        return Promise(function(resolve, reject) {
+            
+            // Log message
+            local error = "horrible error";
+            
+            conctr.error(error, function(err, resp) {
+                if (err) {
+                    reject (err);
+                    return;
+                }
+
+                // Ensure that the device ids do not already match
+                this.assertTrue(resp.statuscode == 201);
+                resolve();
+            }.bindenv(this))
 
         }.bindenv(this))
     }
@@ -128,7 +248,7 @@ class AgentTestCase extends ImpTestCase {
                 try {
                     this.assertEqual(CONCTR_TEST_HTTP_UNAUTHORIZED, resp.statuscode);
                     resolve();
-                } catch(error) {
+                } catch (error) {
                     reject(error);
                 }
 
