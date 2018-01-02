@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#require "conctr.agent.lib.nut:2.0.0"
+#require "conctr.agent.lib.nut:2.1.0"
 
 const APP_ID = "Enter your conctr application id";
 const API_KEY = "Enter your conctr API key";
