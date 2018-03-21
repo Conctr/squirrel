@@ -323,6 +323,7 @@ class Conctr {
         // Callback function for resubscribing
         local _reconnect = function () {
             if (_reconnectTimer) imp.cancelwakeup(_reconnectTimer);
+            reqTime = time();
             _reconnectTimer = null;
             subscribe(topics, cb);
         }
