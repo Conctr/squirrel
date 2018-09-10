@@ -394,6 +394,8 @@ class Conctr {
                 wakeupTime = 1;
             } else if (resp.statuscode == 401) {
                 throw "Conctr: Authentication failed";
+            } else if (resp.statuscode == 409) {
+                throw "Conctr: Duplicate connection made"
             } else {
                 local conTime = time() - reqTime;
                 if (conTime < MIN_RECONNECT_TIME) {
@@ -407,7 +409,7 @@ class Conctr {
             _pollingReq = null;
             _reconnectTimer = imp.wakeup(wakeupTime, _reconnect.bindenv(this));
 
-        };
+        };  
 
 
         headers["Content-Type"] <- "application/json";
